@@ -21,8 +21,8 @@ commit in this repository whose subject starts with the phase ID, so
 |---|---|---|---|
 | P0 | scaffold, pins, config, profiles, `cli init-env`/`check`, hooks, CI | done | 15 tests pass; `cli check` prints mode matrix; hook blocked a planted word |
 | P1 | campus DB, authorizer, query templates | done | 16 DB tests: seed hash reproducible, authorizer denials, account scoping |
-| P2a | ingestion pipeline (7 stages), sources, handbook PDF | in progress | |
-| P2b | retrieval, stores, grounded answers, step 5 | pending | |
+| P2a | ingestion pipeline (7 stages), sources, handbook PDF | done | 19 sources, 117 chunks; offline verify hit@3 0.917, NIM verify hit@3 1.0; re-ingest 0 calls; step 1-4 checkpoints pass |
+| P2b | retrieval, stores, grounded answers, step 5 | in progress | stores + 5 retrieval modes written with P2a |
 | P3 | decisions: wire, questions, Jev client, stub, LLM router, policy | pending | |
 | P4 | tools and public APIs, fixtures | pending | |
 | P5 | graph, memory, agent, confirm, `cli step`/`demo`/`chat` | pending | |
@@ -36,11 +36,15 @@ commit in this repository whose subject starts with the phase ID, so
 
 ## Next action
 
-P2a: handbook sources in `data/sources/_src/` + `scripts/make_pdfs.py`, Markdown sources,
-`manifest.csv`, `probes.jsonl`, then `ingest/` stages 1-7, `kb.db`, `cli ingest` family, tests.
+P2b: `llm/` (OpenAI-compatible client for NIM and Google AI Studio, stub, prompts), `schemas.py`,
+`rag/condense.py`, `rag/answer.py`, `cli retrieve --compare`, `cli ask`, two-node step-5 graph, store-parity and
+embedding-contract tests, step-5 checkpoint (needs demo turns 1 and 3 in `data/demo_turns.jsonl`).
 
 ## Build environment notes
 
 - Local interpreter: Python 3.14.6 (Windows). The plan targets 3.10 and 3.12; code
   avoids syntax newer than 3.10, and CI covers 3.10 and 3.12.
 - `verify@build` findings are recorded in `docs/verify-at-build.md`.
+- Keys live in `.env` (git-ignored): two NVIDIA keys, a Gemini key, an HF token. `COPILOT_CHAT_PROVIDER=google`
+  because NIM chat requests timed out on 2026-09-23; NIM embeddings work.
+- Code patches: prefer the Edit tool; shell heredocs with backslash escapes corrupted two files once.

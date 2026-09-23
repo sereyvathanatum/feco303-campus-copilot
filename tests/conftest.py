@@ -40,6 +40,7 @@ def pytest_configure(config):
     os.environ["COPILOT_ENV_FILE"] = str(ROOT / "tests" / "_no_env_file")
     os.environ["COPILOT_TODAY"] = "2026-10-06"
     os.environ["COPILOT_APIS_LIVE"] = "false"
+    os.environ["COPILOT_TOKENIZER"] = "builtin"  # same token counts on every machine
 
 
 @pytest.fixture(autouse=True)

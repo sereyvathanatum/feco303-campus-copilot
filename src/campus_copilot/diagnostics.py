@@ -13,12 +13,13 @@ from .config import Settings, is_real_key
 
 MODE_MATRIX = [
     ("offline", "none", "none; stubs + fixtures"),
-    ("nim", "NVIDIA_API_KEY", "LLM, embeddings, reranker, VLM; stub decider"),
+    ("nim", "NIM and/or Gemini key", "LLM, embeddings, reranker, VLM; stub decider"),
     ("full", "NIM + TYPESAFE_API_KEY", "everything; APIs live or fixture-cached"),
 ]
 
 ENDPOINTS = {
     "NVIDIA NIM": "https://integrate.api.nvidia.com/v1/models",
+    "Google AI Studio": "https://generativelanguage.googleapis.com/v1beta/openai/models",
     "TypeSafe Jev": "https://api.typesafe.ai/v1/systemone",
     "Open-Meteo": "https://api.open-meteo.com/v1/forecast?latitude=11.56&longitude=104.93&hourly=precipitation_probability&forecast_days=1",
     "ExchangeRate-API": "https://open.er-api.com/v6/latest/USD",
@@ -86,15 +87,22 @@ def run_check(settings: Settings, network: bool = True) -> str:
     lines.append(f"Profile:   {settings.profile.name}  (capabilities: {', '.join(settings.profile.capabilities)})")
     lines.append(f".env file: {settings.env_file or 'not found (all keys missing; offline mode)'}")
     lines.append(f"NVIDIA_API_KEY:   {key_state('NVIDIA_API_KEY')}")
+    lines.append(f"NVIDIA_NEMOTRON_API_KEY: {key_state('NVIDIA_NEMOTRON_API_KEY')} (optional; falls back to NVIDIA_API_KEY)")
     lines.append(f"TYPESAFE_API_KEY: {key_state('TYPESAFE_API_KEY')}")
+    lines.append(f"GEMINI_API_KEY:   {key_state('GEMINI_API_KEY')} (optional; Google AI Studio chat provider)")
+    lines.append(f"HF_TOKEN:         {key_state('HF_TOKEN')} (optional; tokenizer downloads)")
     if settings.profile.get("app.force_offline"):
         lines.append("Profile forces offline mode (app.force_offline = true).")
     for note in settings.notes:
         lines.append(f"Note: {note}")
     lines.append("")
     lines.append("Models:")
-    lines.append(f"  chat / vision : {settings.chat_model}")
-    lines.append(f"  small         : {settings.small_model}")
+    providers = settings.chat_providers() or ["stub"]
+    lines.append(f"  chat provider : {' -> '.join(providers)} (COPILOT_CHAT_PROVIDER={settings.chat_provider})")
+    if settings.has_google:
+        lines.append(f"  google chat   : {settings.google_chat_model}  small: {settings.google_small_model}")
+    lines.append(f"  nim chat      : {settings.chat_model}")
+    lines.append(f"  nim small     : {settings.small_model}")
     lines.append(f"  embeddings    : {settings.embed_model}")
     lines.append(f"  reranker      : {settings.rerank_model}")
     lines.append(f"  decision model: {settings.jev_model} at {settings.typesafe_base_url}")

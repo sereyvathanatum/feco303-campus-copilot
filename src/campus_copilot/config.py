@@ -32,6 +32,8 @@ RUNS_DIR = REPO_ROOT / "runs"
 PLACEHOLDER_KEYS = {
     "nvapi-replace-with-a-real-key",
     "typesafe-replace-with-a-real-key",
+    "gemini-replace-with-a-real-key",
+    "hf-replace-with-a-real-token",
 }
 
 ALL_CAPABILITIES = (
@@ -42,12 +44,16 @@ ALL_CAPABILITIES = (
 DEFAULTS = {
     "NVIDIA_BASE_URL": "https://integrate.api.nvidia.com/v1",
     "NIM_CHAT_MODEL": "google/gemma-4-31b-it",
-    "NIM_SMALL_MODEL": "nvidia/nemotron-nano-9b-v2",
+    "NIM_SMALL_MODEL": "nvidia/nemotron-3.5-lightning-30b-a3b",
     "NIM_EMBED_MODEL": "nvidia/nemotron-3-embed-1b",
     "NIM_RERANK_MODEL": "nvidia/llama-nemotron-rerank-1b-v2",
     "NIM_TEMPERATURE": "0.0",
     "NIM_MAX_TOKENS": "512",
     "NIM_TIMEOUT": "60",
+    "GOOGLE_BASE_URL": "https://generativelanguage.googleapis.com/v1beta/openai",
+    "GOOGLE_CHAT_MODEL": "gemma-4-31b-it",
+    "GOOGLE_SMALL_MODEL": "gemma-4-26b-a4b-it",
+    "COPILOT_CHAT_PROVIDER": "nim",
     "TYPESAFE_BASE_URL": "https://api.typesafe.ai/v1",
     "TYPESAFE_MODEL": "jev-latest",
     "TYPESAFE_TIMEOUT": "30",
@@ -223,6 +229,12 @@ def step_profile_name(step: int) -> str:
 class Settings:
     env_file: Path | None
     nvidia_api_key: str | None
+    nemotron_api_key: str | None
+    gemini_api_key: str | None
+    chat_provider: str
+    google_base_url: str
+    google_chat_model: str
+    google_small_model: str
     typesafe_api_key: str | None
     nvidia_base_url: str
     chat_model: str
@@ -242,8 +254,25 @@ class Settings:
     notes: list[str] = field(default_factory=list)
 
     @property
+    def offline_forced(self) -> bool:
+        return bool(self.profile.get("app.force_offline", False))
+
+    @property
     def has_nim(self) -> bool:
-        return is_real_key(self.nvidia_api_key) and not self.profile.get("app.force_offline", False)
+        return is_real_key(self.nvidia_api_key) and not self.offline_forced
+
+    @property
+    def has_google(self) -> bool:
+        return is_real_key(self.gemini_api_key) and not self.offline_forced
+
+    @property
+    def has_live_llm(self) -> bool:
+        return self.has_nim or self.has_google
+
+    def chat_providers(self) -> list[str]:
+        """Live chat providers in preference order: the selected one first, the other as fallback."""
+        available = [p for p, ok in (("nim", self.has_nim), ("google", self.has_google)) if ok]
+        return sorted(available, key=lambda p: p != self.chat_provider)
 
     @property
     def has_jev(self) -> bool:
@@ -251,7 +280,8 @@ class Settings:
 
     @property
     def run_mode(self) -> str:
-        if not self.has_nim:
+        # "nim" mode means live models (NIM, or Google AI Studio for chat) with the stub decider.
+        if not self.has_live_llm:
             return "offline"
         return "full" if self.has_jev else "nim"
 
@@ -277,6 +307,12 @@ def get_settings(profile: str | Profile | None = None, overrides: dict[str, Any]
     prof = profile if isinstance(profile, Profile) else load_profile(profile, overrides)
     notes: list[str] = []
     nv, ts = os.environ.get("NVIDIA_API_KEY"), os.environ.get("TYPESAFE_API_KEY")
+    nemo = os.environ.get("NVIDIA_NEMOTRON_API_KEY")
+    gemini = os.environ.get("GEMINI_API_KEY")
+    provider = _env("COPILOT_CHAT_PROVIDER").strip().lower() or "nim"
+    if provider not in {"nim", "google"}:
+        notes.append(f"COPILOT_CHAT_PROVIDER={provider!r} is unknown; using nim.")
+        provider = "nim"
     if nv and not is_real_key(nv):
         notes.append("NVIDIA_API_KEY holds the placeholder value; NIM counts as missing.")
     if ts and not is_real_key(ts):
@@ -284,6 +320,13 @@ def get_settings(profile: str | Profile | None = None, overrides: dict[str, Any]
     return Settings(
         env_file=env_file,
         nvidia_api_key=nv if is_real_key(nv) else None,
+        # Nemotron models (small, embeddings, reranker) may use a separate key.
+        nemotron_api_key=nemo if is_real_key(nemo) else (nv if is_real_key(nv) else None),
+        gemini_api_key=gemini if is_real_key(gemini) else None,
+        chat_provider=provider,
+        google_base_url=_env("GOOGLE_BASE_URL").rstrip("/"),
+        google_chat_model=_env("GOOGLE_CHAT_MODEL"),
+        google_small_model=_env("GOOGLE_SMALL_MODEL"),
         typesafe_api_key=ts if is_real_key(ts) else None,
         nvidia_base_url=_env("NVIDIA_BASE_URL"),
         chat_model=_env("NIM_CHAT_MODEL"),
