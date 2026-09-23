@@ -185,6 +185,156 @@ def cmd_jev_smoke(args) -> int:
     return 0
 
 
+# ------------------------------------------------------------------ P5 commands
+
+def _print_turn(result, copilot, show_trace: bool = True) -> None:
+    badge = " [STUB]" if (result.decision or {}).get("stub") else ""
+    print(f"\n{result.answer}\n")
+    route = f"route {result.route}" if result.route else "no route"
+    print(f"  [{result.kind}] {route}{badge}  thread {result.thread_id}  trace {result.trace_id}")
+    if (result.query or {}).get("rewritten"):
+        print(f"  query rewritten: {result.query['rewritten']!r} (original kept: {result.query['original']!r})")
+    for call in result.tool_calls:
+        print(f"  tool {call['tool']} {call.get('args')} -> {'ok' if call.get('ok') else 'error'}"
+              f"{' (' + call['source'] + ')' if call.get('source') else ''}")
+    for note in result.notes:
+        if note.startswith(("STUB", "fallback", "MCP", "agent stopped", "passage filter", "answer check")):
+            print(f"  note: {note}")
+    if show_trace:
+        spans = copilot.trace(result.trace_id)
+        timeline = ", ".join(f"{s['span']} {s['ms']:.0f}ms" for s in spans if s["span"] not in ("turn",))
+        print(f"  trace: {timeline}")
+
+
+def _copilot(args, step: int | None = None):
+    from .graph.build import Copilot
+
+    profile = config.step_profile_name(step) if step else getattr(args, "profile", None)
+    overrides = {}
+    for item in getattr(args, "set", None) or []:
+        key, _, value = item.partition("=")
+        overrides[key.strip()] = _coerce(value.strip())
+    return Copilot(config.get_settings(profile, overrides))
+
+
+def _confirm_loop(copilot, result):
+    while result.kind == "confirm":
+        answer = input(f"{result.answer} [y/n] ").strip().lower()
+        result = copilot.resume(result.thread_id, answer in {"y", "yes"})
+        _print_turn(result, copilot)
+    return result
+
+
+def cmd_ask(args) -> int:
+    copilot = _copilot(args)
+    try:
+        result = copilot.ask(args.message, thread_id=args.thread, account_id=args.account, image_path=args.image)
+        _print_turn(result, copilot)
+        if result.kind == "confirm":
+            if args.yes or args.no:
+                _print_turn(copilot.resume(result.thread_id, bool(args.yes)), copilot)
+            elif sys.stdin.isatty():
+                _confirm_loop(copilot, result)
+    finally:
+        copilot.close()
+    return 0
+
+
+def _chat(copilot, args) -> int:
+    import uuid
+
+    from .graph.capabilities import step_label
+
+    thread = args.thread or f"chat-{uuid.uuid4().hex[:6]}"
+    account = args.account or copilot.settings.profile.get("app.account_id", "A0001")
+    print(f"{step_label(copilot.settings.profile)} | mode {copilot.settings.run_mode} | account {account} | "
+          f"thread {thread}")
+    print("Commands: /thread (new thread), /trace (last trace), /profile NAME, /quit")
+    last = None
+    while True:
+        try:
+            message = input("> ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print()
+            break
+        if not message:
+            continue
+        if message in {"/quit", "/exit"}:
+            break
+        if message == "/thread":
+            thread = f"chat-{uuid.uuid4().hex[:6]}"
+            print(f"new thread {thread}")
+            continue
+        if message == "/trace":
+            for span in copilot.trace(last.trace_id) if last else []:
+                extras = {k: v for k, v in span.items() if k in ("tool", "action", "model", "tokens_in", "reason")}
+                print(f"  {span['span']:<16} {span['ms']:>7.1f} ms {extras}")
+            continue
+        if message.startswith("/profile"):
+            name = message.split(maxsplit=1)[1] if " " in message else "baseline"
+            copilot.close()
+            from .graph.build import Copilot
+
+            copilot = Copilot(config.get_settings(name))
+            print(f"profile {name}")
+            continue
+        last = copilot.ask(message, thread_id=thread, account_id=account)
+        _print_turn(last, copilot, show_trace=False)
+        last = _confirm_loop(copilot, last)
+    copilot.close()
+    return 0
+
+
+def cmd_chat(args) -> int:
+    return _chat(_copilot(args), args)
+
+
+def cmd_demo(args) -> int:
+    from .graph.demo import demo_settings, run_demo
+    from .graph.build import Copilot
+
+    profile = config.step_profile_name(args.step_n) if getattr(args, "step_n", None) else args.profile
+    copilot = Copilot(demo_settings(profile))
+    try:
+        board = run_demo(copilot, confirm=args.confirm)
+    finally:
+        copilot.close()
+    print(board.render())
+    if board.step:
+        expected = board.expected(board.step)
+        verdict = "matches" if board.passed == expected else "DIFFERS FROM"
+        print(f"\nScoreboard {verdict} the expected turns for step {board.step}: {expected}")
+        return 0 if board.passed == expected else 1
+    return 0 if len(board.passed) == len(board.outcomes) else 1
+
+
+def cmd_step(args) -> int:
+    from .graph.capabilities import step_label
+
+    step = args.n
+    print(step_label(config.load_profile(config.step_profile_name(step))))
+    if args.check:
+        import pytest
+
+        path = config.REPO_ROOT / "tests" / "steps" / f"test_step_{step:02d}.py"
+        return int(pytest.main(["-q", str(path)]))
+    if args.chat:
+        return _chat(_copilot(args, step), args)
+    args.step_n = step
+    return cmd_demo(args)
+
+
+def cmd_tools(args) -> int:
+    from .tools.registry import registry
+
+    for spec in registry().specs(include_sql=True):
+        params = spec.parameters().get("properties", {})
+        flag = "W" if spec.write else "R"
+        print(f"  [{flag}] {spec.name:<17} {spec.kind:<3} {spec.description}")
+        print(f"        args: {', '.join(params) or '(none)'}   source: {spec.source}")
+    return 0
+
+
 # ----------------------------------------------------------------------- parser
 
 def build_parser() -> argparse.ArgumentParser:
@@ -238,6 +388,37 @@ def build_parser() -> argparse.ArgumentParser:
 
     sub.add_parser("jev-smoke", help="send the Jev reference request; print noul, model, usage, latency"
                    ).set_defaults(func=cmd_jev_smoke)
+
+    p = sub.add_parser("ask", help="one turn; prints the answer and a compact trace")
+    p.add_argument("message")
+    p.add_argument("--thread")
+    p.add_argument("--account")
+    p.add_argument("--image", help="path to a photographed notice (vision capability)")
+    p.add_argument("--yes", action="store_true", help="confirm a pending write")
+    p.add_argument("--no", action="store_true", help="cancel a pending write")
+    p.set_defaults(func=cmd_ask)
+
+    p = sub.add_parser("chat", help="interactive session with /thread, /trace, /profile")
+    p.add_argument("--thread")
+    p.add_argument("--account")
+    p.set_defaults(func=cmd_chat)
+
+    p = sub.add_parser("demo", help="run the 14 scripted demo turns and print the scoreboard")
+    p.add_argument("--confirm", action="store_true", help="confirm write turns instead of cancelling them")
+    p.set_defaults(func=cmd_demo)
+
+    p = sub.add_parser("step", help="run the chatbot as it stands after build-path step N")
+    p.add_argument("n", type=int, choices=range(1, 13), metavar="N")
+    mode = p.add_mutually_exclusive_group()
+    mode.add_argument("--demo", action="store_true", help="demo scoreboard (default)")
+    mode.add_argument("--check", action="store_true", help="the step's checkpoint tests")
+    mode.add_argument("--chat", action="store_true", help="a chat session with this step's capabilities")
+    p.add_argument("--confirm", action="store_true")
+    p.add_argument("--thread")
+    p.add_argument("--account")
+    p.set_defaults(func=cmd_step)
+
+    sub.add_parser("tools", help="list tool specs").set_defaults(func=cmd_tools)
 
     return parser
 

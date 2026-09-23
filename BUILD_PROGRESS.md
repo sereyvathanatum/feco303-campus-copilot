@@ -22,11 +22,11 @@ commit in this repository whose subject starts with the phase ID, so
 | P0 | scaffold, pins, config, profiles, `cli init-env`/`check`, hooks, CI | done | 15 tests pass; `cli check` prints mode matrix; hook blocked a planted word |
 | P1 | campus DB, authorizer, query templates | done | 16 DB tests: seed hash reproducible, authorizer denials, account scoping |
 | P2a | ingestion pipeline (7 stages), sources, handbook PDF | done | 19 sources, 117 chunks; offline verify hit@3 0.917, NIM verify hit@3 1.0; re-ingest 0 calls; step 1-4 checkpoints pass |
-| P2b | retrieval, stores, grounded answers, step 5 | partly done | 3 stores, 5 modes, `retrieve --compare`, LLM client (NIM + Google, stub fallback), grounded answers, condense; embedding-contract and store-parity tests pass. Remaining: `cli ask` + step-5 checkpoint, built with the P5 graph |
+| P2b | retrieval, stores, grounded answers, step 5 | done | 3 stores, 5 modes, `retrieve --compare`, LLM client (NIM + Google, stub fallback), grounded answers, condense; `cli ask` and step-5 checkpoint landed with P5 |
 | P3 | decisions: wire, questions, Jev client, stub, LLM router, policy | done | live `jev-smoke` 0.98 in 530 ms; 16 live turn decisions recorded in `data/fixtures/jev/` and replayed in tests; 26 decision tests |
 | P4 | tools and public APIs, fixtures | done | 15 tools (10 campus incl. 3 writes, 4 public APIs, run_sql); live fixtures recorded 23 Sep 2026 + poisoned Wikipedia variant; 29 tool tests (success, empty, error, timeout) |
-| P5 | graph, memory, agent, confirm, `cli step`/`demo`/`chat` | in progress | |
-| P6 | MCP servers and transport switch | pending | |
+| P5 | graph, memory, agent, confirm, `cli step`/`demo`/`chat` | done | offline scoreboard 2/3/7/11/13/13 at steps 5-10 exactly as planned; 3 agent modes; confirm/cancel; checkpoints 5-9; 146 tests |
+| P6 | MCP servers and transport switch | in progress | |
 | P7 | Gradio UI | pending | |
 | P8 | observability and evaluation | pending | |
 | P9 | guards and adversarial controls | pending | |
@@ -36,14 +36,11 @@ commit in this repository whose subject starts with the phase ID, so
 
 ## Next action
 
-P5: `data/demo_turns.jsonl` (14 turns + expected checks), `graph/arguments.py` (decision + regex -> tool args),
-`graph/nodes.py`, `graph/agent.py` (3 modes, repeat detector, max calls), risk gate + `interrupt()` confirm,
-`graph/build.py` (`Copilot.ask/resume`, SqliteSaver in runs/memory.db, capability-driven wiring, Mermaid export),
-`graph/demo.py` (scoreboard), `cli ask|chat|step N [--demo|--check|--chat]|demo|tools`, tests incl. step 5-10
-checkpoints and the expected scoreboard 2/3/7/11/13/13 (steps 5-10). This also closes P2b.
-
-Graph design already written: `graph/state.py`, `graph/memory.py`, `graph/capabilities.py`,
-`observability/trace.py`. Nodes and `graph/build.py` come in P5.
+P6: `mcp/campus_server.py` (FastMCP; read tools + handbook resources; no write tools), `mcp/public_server.py`
+(4 API tools), `mcp/client.py` (`MCPTransport`: stdio servers, `langchain-mcp-adapters` or the SDK client,
+sync wrapper), `cli mcp-serve campus|public`, parity tests (same tool results in-process vs MCP),
+`tests/steps/test_step_10.py` (scoreboard identical in-process and over MCP), docs note on MCP Inspector.
+Live check still owed: `cli ask` for demo turns 1 and 3 in `full` mode (Google chat is slow, about 40 s/call).
 
 ## Build environment notes
 

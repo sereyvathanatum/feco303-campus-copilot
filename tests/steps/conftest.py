@@ -34,3 +34,29 @@ def artifact(state: dict, stage: str):
     if path.suffix == ".json":
         return json.loads(path.read_text(encoding="utf-8"))
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+
+
+def offline_copilot(step: int | None, **overrides):
+    """A Copilot for one build step (or the baseline), offline, with the demo clock."""
+    from campus_copilot.graph.build import Copilot
+    from campus_copilot.graph.demo import demo_settings
+
+    profile = config.step_profile_name(step) if step else "baseline"
+    return Copilot(demo_settings(profile, {"app.force_offline": True, "apis.live": False, **overrides}))
+
+
+def demo_board(step: int | None, **overrides):
+    from campus_copilot.graph.demo import run_demo
+
+    copilot = offline_copilot(step, **overrides)
+    try:
+        return run_demo(copilot), copilot
+    finally:
+        copilot.close()
+
+
+def spans(copilot, board, name: str) -> list[dict]:
+    out = []
+    for outcome in board.outcomes:
+        out += [s for s in copilot.trace(outcome.result.trace_id) if s["span"] == name]
+    return out

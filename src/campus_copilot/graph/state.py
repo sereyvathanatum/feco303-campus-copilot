@@ -21,6 +21,7 @@ class CopilotState(TypedDict, total=False):
     query: dict                                            # {"original": ..., "rewritten": ...}
     tool_calls: list[dict]
     pending_write: dict | None
+    pending_call: dict | None                              # the agent's next tool call, between reason and act
     sources: list[dict]
     answer: str
     result: dict | None                                    # TurnResult for this turn
