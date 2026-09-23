@@ -19,9 +19,9 @@ commit in this repository whose subject starts with the phase ID, so
 
 | Phase | Scope (plan §13) | Status | Evidence |
 |---|---|---|---|
-| P0 | scaffold, pins, config, profiles, `cli init-env`/`check`, hooks, CI | in progress | |
-| P1 | campus DB, authorizer, query templates | pending | |
-| P2a | ingestion pipeline (7 stages), sources, handbook PDF | pending | |
+| P0 | scaffold, pins, config, profiles, `cli init-env`/`check`, hooks, CI | done | 15 tests pass; `cli check` prints mode matrix; hook blocked a planted word |
+| P1 | campus DB, authorizer, query templates | done | 16 DB tests: seed hash reproducible, authorizer denials, account scoping |
+| P2a | ingestion pipeline (7 stages), sources, handbook PDF | in progress | |
 | P2b | retrieval, stores, grounded answers, step 5 | pending | |
 | P3 | decisions: wire, questions, Jev client, stub, LLM router, policy | pending | |
 | P4 | tools and public APIs, fixtures | pending | |
@@ -36,8 +36,8 @@ commit in this repository whose subject starts with the phase ID, so
 
 ## Next action
 
-Finish P0: write `config.py`, profiles, `cli init-env` and `cli check`, the language
-and secret checks, and the CI workflow; then run the P0 definition-of-done checks.
+P2a: handbook sources in `data/sources/_src/` + `scripts/make_pdfs.py`, Markdown sources,
+`manifest.csv`, `probes.jsonl`, then `ingest/` stages 1-7, `kb.db`, `cli ingest` family, tests.
 
 ## Build environment notes
 

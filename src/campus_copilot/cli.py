@@ -49,6 +49,19 @@ def cmd_check(args) -> int:
     return 0
 
 
+# ------------------------------------------------------------------ P1 commands
+
+def cmd_seed(args) -> int:
+    from .db import connection, seed
+
+    path = seed.build(connection.db_path())
+    print(f"Campus DB built at {path}")
+    for table, count in seed.table_counts(path).items():
+        print(f"  {table:<14} {count:>4} rows")
+    print(f"Content hash: {seed.content_hash(path)}")
+    return 0
+
+
 # ----------------------------------------------------------------------- parser
 
 def build_parser() -> argparse.ArgumentParser:
@@ -63,6 +76,8 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("check", help="print run mode, .env path, model IDs, API reachability")
     p.add_argument("--no-network", action="store_true", help="skip reachability probes")
     p.set_defaults(func=cmd_check)
+
+    sub.add_parser("seed", help="build the campus DB from data/seed/").set_defaults(func=cmd_seed)
 
     return parser
 

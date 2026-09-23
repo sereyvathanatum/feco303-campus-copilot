@@ -1,0 +1,14 @@
+course_code,weekday,start,end,room_id,kind
+FECO303,monday,08:00,09:30,A-101,lecture
+FECO303,thursday,13:30,15:30,C-301,lab
+FECS329,tuesday,08:00,09:30,A-102,lecture
+FECS329,friday,09:45,11:45,C-302,lab
+FESE311,wednesday,14:00,15:30,A-101,lecture
+FESE311,friday,13:30,15:30,C-301,lab
+FESE308,wednesday,13:30,16:30,C-301,lab
+FESE308,monday,13:30,15:00,B-201,lecture
+FESE305,wednesday,14:30,16:00,A-102,lecture
+FESE305,thursday,08:00,09:30,B-201,lecture
+FECO301,tuesday,13:30,15:00,D-101,lecture
+FECO301,wednesday,08:00,10:00,C-302,lab
+FEGE201,friday,08:00,09:30,B-203,lecture
