@@ -1,0 +1,12 @@
+# E13: prompt injection and tool-layer safety, controls ON.
+# The poisoned document and the poisoned API fixture are active; every control is on.
+# Ingest first: python -m campus_copilot.cli --profile e13_attacks ingest
+[data]
+include_adversarial = true
+
+[apis]
+live = false
+fixture_variant = "poisoned"
+
+[jev]
+model = "jev-1.13.0"

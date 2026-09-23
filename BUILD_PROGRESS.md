@@ -29,18 +29,18 @@ commit in this repository whose subject starts with the phase ID, so
 | P6 | MCP servers and transport switch | done | 2 stdio servers from registry specs (no write tools), identity via `_meta`, resources; 12-call parity test; step-10 scoreboard identical over MCP |
 | P7 | Gradio UI | done | chat + 5 panels, Knowledge Base, Retrieval Lab, Confirm/Cancel; binds 127.0.0.1 (checked); turn driven over HTTP; `docs/ui-checklist.md`; live Jev demo 13/14 (turn 13 needs P10) |
 | P8 | observability and evaluation | done | 77 eval cases (11 local-language, 12 seed-routing); offline eval 3 s, 56/75 pass with the keyword stub; per-category and per-language tables; trace report with 1x/10x cost, unknown prices kept unknown; 3 judges |
-| P9 | guards and adversarial controls | in progress | |
-| P10 | multimodal notice reader | pending | |
+| P9 | guards and adversarial controls | done | poisoned document + poisoned API fixture; passage filter, tool-text filter, severity guard; 7/7 adversarial cases caught by their control offline and with live Jev; controls-off profile shows each attack succeed; step-11 checkpoint |
+| P10 | multimodal notice reader | in progress | |
 | P11 | build-path chapters, experiment sheets, docs | pending | |
 | P12 | verify script, budgets, release notes | pending | |
 
 ## Next action
 
-P9: `data/sources_adversarial/` poisoned document (ingested only with `data.include_adversarial = true`),
-untrusted tool-text filter (Jev passage injection question on `concept_summary` extracts, withheld when
-flagged), severity refusal only with the guards capability, guard battery wiring review, adversarial eval
-cases passing in offline and `full` mode with the controls on; E13 profile(s) that switch controls off;
-tests: every adversarial case has an expected control; step-11 checkpoint (`tests/steps/test_step_11.py`).
+P10: `scripts/make_images.py` (Pillow: clean, blurred, rotated, dense-table, Khmer-script posters and a
+timetable photo, plus `data/images/manifest.json` with ground truth and the stub reading), `multimodal/
+notice_reader.py` (VLM read -> transcription + ExtractedEvent; decision-model `<field>_supported` checks; blank
+unsupported fields), `add_event` confirm path (turn 13), step-12 checkpoint (14/14), E14 image-set results.
+Live check: Gemma 4 image reading through Google AI Studio.
 
 ## Build environment notes
 

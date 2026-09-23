@@ -91,3 +91,38 @@ def pack_env(pack_kb, tmp_path, monkeypatch):
     shutil.copytree(pack_kb, runs)
     monkeypatch.setenv("COPILOT_RUNS_DIR", str(runs))
     return runs
+
+
+@pytest.fixture(scope="session")
+def adversarial_kb(pack_kb, tmp_path_factory):
+    """The pack knowledge base plus the poisoned E13 document."""
+    import shutil
+
+    from campus_copilot import config
+    from campus_copilot.ingest import pipeline
+
+    path = tmp_path_factory.mktemp("adversarial") / "runs"
+    shutil.copytree(pack_kb, path)
+    previous = os.environ.get("COPILOT_RUNS_DIR")
+    os.environ["COPILOT_RUNS_DIR"] = str(path)
+    try:
+        settings = config.get_settings("e13_attacks", {"app.force_offline": True,
+                                                       "ingest.sources": ["data/sources"]})
+        state = pipeline.run_ingest(settings, echo=lambda _: None)
+        assert "adversarial-fines-notice" in state["stages"]["store"]["stats"]["documents_processed"]
+    finally:
+        if previous is None:
+            os.environ.pop("COPILOT_RUNS_DIR", None)
+        else:
+            os.environ["COPILOT_RUNS_DIR"] = previous
+    return path
+
+
+@pytest.fixture
+def adversarial_env(adversarial_kb, tmp_path, monkeypatch):
+    import shutil
+
+    runs = tmp_path / "runs"
+    shutil.copytree(adversarial_kb, runs)
+    monkeypatch.setenv("COPILOT_RUNS_DIR", str(runs))
+    return runs

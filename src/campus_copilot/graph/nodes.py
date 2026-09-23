@@ -138,6 +138,24 @@ class Nodes:
             return []
         return model_window(_history(state), self.rt.settings).as_dicts()
 
+    def screen_untrusted(self, state: dict, result: dict) -> tuple[dict, str | None]:
+        """Tool-text filter: external text (for example Wikipedia) is checked for instructions aimed at the assistant."""
+        rt = self.rt
+        text = (result.get("data") or {}).get("extract") if isinstance(result.get("data"), dict) else None
+        if not (result.get("untrusted") and text and rt.caps.guards and rt.profile.get("guards.enabled", True)):
+            return result, None
+        note = None
+        with self.span(state, "screen_tool_text", tool=result.get("tool"), decider=rt.decider.name) as span:
+            before = dict(rt.decider.usage_totals)
+            verdict = rt.decider.judge_passages(state["message"], [text])[0]
+            span.set(injection=verdict.get("injection"), **_usage_delta(rt.decider, before))
+            if verdict.get("injection", 0.0) > float(rt.profile.get("policy.passage_injection", 0.70)):
+                result = {**result, "data": {**result["data"], "extract": "[withheld]"}, "withheld": True,
+                          "summary": (f"External source ({result.get('source_api', 'Wikipedia')}): the summary "
+                                      "contained instructions aimed at the assistant and was withheld.")}
+                note = f"untrusted tool text withheld: {result.get('tool')} (injection {verdict['injection']:.2f})"
+        return result, note
+
     # -------------------------------------------------------------- nodes
     def begin(self, state: dict) -> dict:
         with self.span(state, "begin", account_id=state.get("account_id"), step=self.rt.profile.step) as span:
@@ -195,7 +213,8 @@ class Nodes:
             action = policy.decide_action(
                 decision, self.rt.thresholds, guards_enabled=bool(self.rt.profile.get("guards.enabled", True)),
                 tools=caps.tools, agent=caps.agent, offices=self.rt.profile.get("campus.offices", {}),
-                has_slots=has_slots, force_agent=str(self.rt.profile.get("agent.force", "")))
+                has_slots=has_slots, force_agent=str(self.rt.profile.get("agent.force", "")),
+                severity_check=caps.guards)
             span.set(action=action.kind, reason=action.reason, flags=action.flags or None)
             return {"action": action.kind, "route": action.route or state.get("route"),
                     "flags": action.flags, "answer": action.reply or "",
@@ -331,7 +350,7 @@ class Nodes:
             spec = rt.registry.get(proposal.tool)
             if spec and spec.write:
                 return self._propose_write(state, proposal.tool, proposal.args)
-            result = rt.run_tool(proposal.tool, proposal.args, state["account_id"])
+            result, note = self.screen_untrusted(state, rt.run_tool(proposal.tool, proposal.args, state["account_id"]))
             calls = [result]
             if result.get("suggest") == "search_books" and rt.caps.tools:
                 calls.append(rt.run_tool("search_books", {"query": proposal.args.get("title") or state["message"]},
@@ -339,7 +358,8 @@ class Nodes:
             answer = " ".join(_format_tool_answer(r) for r in calls)
             slots = _slots_after(state.get("slots") or {}, calls)
             span.set(ok=result.get("ok"), source=result.get("source"), ms=result.get("ms"))
-            return {"answer": answer, "tool_calls": calls, "slots": slots,
+            notes = state.get("notes", []) + ([note] if note else [])
+            return {"answer": answer, "tool_calls": calls, "slots": slots, "notes": notes,
                     "result": TurnResult(kind="tool", answer=answer, route=state.get("route"), tool_calls=calls,
                                          sources=result.get("sources") or []).model_dump()}
 
@@ -387,9 +407,11 @@ class Nodes:
     def agent_act(self, state: dict) -> dict:
         plan = state.get("pending_call") or {}
         with self.span(state, "agent_act", tool=plan.get("tool"), args=plan.get("args")) as span:
-            result = self.rt.run_tool(plan["tool"], plan.get("args") or {}, state["account_id"])
+            result, note = self.screen_untrusted(state, self.rt.run_tool(plan["tool"], plan.get("args") or {},
+                                                                         state["account_id"]))
             span.set(ok=result.get("ok"), source=result.get("source"))
-            return {"tool_calls": (state.get("tool_calls") or []) + [result], "pending_call": None}
+            return {"tool_calls": (state.get("tool_calls") or []) + [result], "pending_call": None,
+                    "notes": state.get("notes", []) + ([note] if note else [])}
 
     def risk_gate(self, state: dict) -> dict:
         rt = self.rt

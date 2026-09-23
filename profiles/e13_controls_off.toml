@@ -1,0 +1,9 @@
+# E13: the same attacks with the controls switched OFF, to see what each control prevents.
+extends = "e13_attacks"
+
+[guards]
+enabled = false
+
+[rag]
+passage_filter = false
+answer_check = false

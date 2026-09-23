@@ -209,6 +209,9 @@ def retrieve(query: str, settings, conn: sqlite3.Connection | None = None, embed
             else:
                 chunks, dropped, note = judge(settings, query, dense(vector_store, query, k * 2), k, decider)
                 notes.append(note)
+        if not settings.profile.get("data.include_adversarial", False):
+            # the poisoned E13 document may sit in the knowledge base; only E13 profiles retrieve it
+            chunks = [c for c in chunks if not c.source_id.startswith("adversarial-")]
         for rank, c in enumerate(chunks, start=1):
             c.rank = rank
         if embedder.offline and mode != "lexical":

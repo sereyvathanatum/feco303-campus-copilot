@@ -70,7 +70,8 @@ class Action:
     confidence: float = 0.0
 
 
-def guard(decision: Decision, t: Thresholds, enabled: bool = True) -> Action | None:
+def guard(decision: Decision, t: Thresholds, enabled: bool = True, severity_check: bool = True) -> Action | None:
+    """Block at `block`; flag at `review`; with the full guard battery, refuse flagged turns of high severity."""
     if not enabled:
         return None
     flags, top_name, top_value = [], None, 0.0
@@ -84,7 +85,7 @@ def guard(decision: Decision, t: Thresholds, enabled: bool = True) -> Action | N
         return Action("refuse", reason=f"{top_name} {top_value:.2f} >= block {t.block:.2f}",
                       reply=REFUSALS[top_name], flags=flags)
     severity = decision.score("guard_severity", 0.0) or 0.0
-    if flags and severity >= t.severity_refuse:
+    if severity_check and flags and severity >= t.severity_refuse:
         return Action("refuse", reason=f"guard_severity {severity:.2f} >= {t.severity_refuse:.2f} with {flags}",
                       reply=REFUSALS[top_name or "injection"], flags=flags)
     return Action("continue", flags=flags) if flags else None
@@ -119,10 +120,10 @@ def missing_details(decision: Decision, route: str, t: Thresholds, has_slots: bo
 
 def decide_action(decision: Decision, t: Thresholds, *, guards_enabled: bool = True, tools: bool = True,
                   agent: bool = True, offices: dict | None = None, has_slots: bool = False,
-                  force_agent: str = "") -> Action:
+                  force_agent: str = "", severity_check: bool = True) -> Action:
     """The full policy for one turn. `has_slots`: memory holds the details a write needs (for example 'Book it.')."""
     flags: list[str] = []
-    blocked = guard(decision, t, guards_enabled)
+    blocked = guard(decision, t, guards_enabled, severity_check)
     if blocked and blocked.kind == "refuse":
         return blocked
     if blocked:
