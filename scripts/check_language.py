@@ -28,6 +28,15 @@ OFF, ON = "<!-- language-check: off -->", "<!-- language-check: on -->"
 AUDIENCE = re.compile(r"\b(" + "|".join(RULES["audience"]["words"]) + r")\b", re.IGNORECASE)
 # Apostrophes and hyphens count as word characters, so "I've" and "e-mail" stay whole.
 PRONOUNS = re.compile(r"(?<![\w'’-])(" + "|".join(RULES["pronouns"]["words"]) + r")(?![\w'’-])")
+# "I" as a Roman numeral, not the pronoun: heading numbering ("I. Programs", "I) Scope") or a
+# numbered term ("Term I", "Part I"). A sentence ending in the pronoun ("than I.") also passes.
+NUMERAL_BEFORE = re.compile(r"\b(Term|Part|Phase|Chapter|Level|Stage|Grade|Volume|Book|Unit)\s+$")
+
+
+def _numeral_i(line: str, match: re.Match) -> bool:
+    if match.group(0) != "I":
+        return False
+    return line[match.end():match.end() + 1] in {".", ")"} or bool(NUMERAL_BEFORE.search(line[:match.start()]))
 
 
 def candidate_files() -> list[Path]:
@@ -95,7 +104,7 @@ def scan_text(lines: list[str]) -> list[tuple[int, str]]:
         if not enabled:
             continue
         hits.extend((number, m.group(0)) for m in AUDIENCE.finditer(line))
-        hits.extend((number, m.group(0)) for m in PRONOUNS.finditer(line))
+        hits.extend((number, m.group(0)) for m in PRONOUNS.finditer(line) if not _numeral_i(line, m))
     return hits
 
 

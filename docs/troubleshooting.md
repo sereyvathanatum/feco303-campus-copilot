@@ -18,4 +18,7 @@
 | The UI is not reachable from another machine | the app binds to 127.0.0.1 by design | run it where the browser runs; `--share` creates a public link only when passed explicitly |
 | `language check failed` on commit | a banned audience word or pronoun in a tracked file (docs/implementation-plan.md §3) | rephrase in the impersonal register; `scripts/check_language.py FILE` checks one file |
 | `secret scan failed` on commit | a key-shaped string in a tracked file | remove it and rotate the key (docs/setup_keys.md) |
+| An answer misses a fact that is in the document | the chunk holding it did not reach the model, or it reached it without context | `cli ask "..." -v --show-chunks` lists every retrieved chunk with its lexical, dense, and reranker scores and marks the ones sent to the model; `cli ingest --show chunk --doc ID` shows how the document was split |
+| Table numbers come back under the wrong column | an older knowledge base split tables mid-row | re-run `cli ingest`: the chunk recipe changed, so every document is re-chunked with the header in each table piece |
+| `nim reranker unavailable (HTTP 410)` in the notes | the reranker model reached end of life | set `NIM_RERANK_MODEL` to a listed model, or `--set rag.reranker=jev` / `local`; retrieval continues with the local heuristic |
 | Scanned PDF adds no chunks | the PDF has no text layer; OCR is out of scope | the extract stage flags empty pages; use a PDF with text or a Markdown version |

@@ -3,14 +3,18 @@
 * `lexical`: FTS5 `bm25()` (hashing-encoder fallback when FTS5 is missing)
 * `dense`: cosine over the stored embeddings
 * `hybrid`: reciprocal-rank fusion of lexical and dense
-* `dense+rerank`: the NIM reranker over the dense candidates
+* `dense+rerank`, `hybrid+rerank`: a candidate pool of `rag.candidates` from the first stage, then the
+  reranker (`rag.reranker`, see `rerank.py`) keeps the best `rag.top_k`, ordered by relevance
 * `dense+judge`: the decision model's passage questions over the dense candidates
 
-Every result is labelled with its score type, store, and latency.
+Every result is labelled with its score type, store, and latency. Each chunk also carries `signals`:
+its lexical and dense ranks and scores, the fused score, and the reranker score, so a log or the
+`--show-chunks` view can show why a chunk made the context.
 """
 
 from __future__ import annotations
 
+import logging
 import re
 import sqlite3
 import time
@@ -19,7 +23,8 @@ from dataclasses import dataclass, field
 from ..ingest import store as kb
 from .embeddings import HashingEmbedder
 
-MODES = ("lexical", "dense", "hybrid", "dense+rerank", "dense+judge")
+log = logging.getLogger(__name__)
+MODES = ("lexical", "dense", "hybrid", "dense+rerank", "hybrid+rerank", "dense+judge")
 LONG_CONTEXT = "long_context"  # E15: every handbook chunk goes into the prompt, no retrieval at all
 _TERM = re.compile(r"[A-Za-z0-9]+|[ក-៿]+")
 _STOP = set(("a an the of to in on for and or is are be by with at from as it this that what which how when where "
@@ -42,6 +47,7 @@ class ScoredChunk:
     store: str
     rank: int = 0
     judge: dict | None = None
+    signals: dict = field(default_factory=dict)
 
     @property
     def locator(self) -> str:
@@ -55,7 +61,24 @@ class ScoredChunk:
         return {"chunk_id": self.chunk_id, "source_id": self.source_id, "page": self.page, "section": self.section,
                 "text": self.text, "token_count": self.token_count, "language": self.language, "score": self.score,
                 "score_type": self.score_type, "store": self.store, "rank": self.rank, "judge": self.judge,
-                "citation": self.citation}
+                "signals": dict(self.signals), "citation": self.citation}
+
+    def describe(self) -> str:
+        """One line for logs: rank, citation, and every signal that placed the chunk."""
+        s = self.signals
+        parts = [f"#{self.rank}" if self.rank else "-", self.citation, f"{self.score_type} {self.score:.4f}"]
+        if "relevance" in s:
+            parts.append(f"relevance {s['relevance']:.3f}")
+        if "lexical_rank" in s:
+            parts.append(f"lexical #{s['lexical_rank']} (bm25 {s['bm25']:.2f})")
+        if "dense_rank" in s:
+            parts.append(f"dense #{s['dense_rank']} (cos {s['cosine']:.3f})")
+        if "rrf" in s:
+            parts.append(f"rrf {s['rrf']:.4f}")
+        if "first_stage_rank" in s:
+            parts.append(f"first-stage #{s['first_stage_rank']}")
+        parts.append(f"{self.token_count} tok")
+        return "  ".join(parts)
 
 
 @dataclass
@@ -67,6 +90,7 @@ class RetrievalResult:
     latency_ms: float
     notes: list[str] = field(default_factory=list)
     dropped: list[ScoredChunk] = field(default_factory=list)
+    candidates: int = 0
 
 
 def _scored(row: dict, score: float, score_type: str, store: str) -> ScoredChunk:
@@ -89,14 +113,19 @@ def lexical(conn: sqlite3.Connection, query: str, k: int) -> tuple[list[ScoredCh
             (match, k)).fetchall()
         ids = [r["chunk_id"] for r in rows]
         by_id = _rows(conn, ids)
-        return [_scored(by_id[r["chunk_id"]], -r["s"], "bm25 (higher is better)", "fts5")
-                for r in rows if r["chunk_id"] in by_id], "fts5 bm25"
+        out = [_scored(by_id[r["chunk_id"]], -r["s"], "bm25 (higher is better)", "fts5")
+               for r in rows if r["chunk_id"] in by_id]
+        for rank, c in enumerate(out, start=1):
+            c.signals.update(lexical_rank=rank, bm25=c.score)
+        return out, "fts5 bm25"
     encoder = HashingEmbedder()
     from .stores.sqlite_numpy import SqliteNumpyStore
 
     store = SqliteNumpyStore(conn, encoder)
-    return [_scored(row, s, "hashing cosine (FTS5 missing)", "hashing") for row, s in store.search(query, k)], \
-        "hashing fallback"
+    out = [_scored(row, s, "hashing cosine (FTS5 missing)", "hashing") for row, s in store.search(query, k)]
+    for rank, c in enumerate(out, start=1):
+        c.signals.update(lexical_rank=rank, bm25=c.score)
+    return out, "hashing fallback"
 
 
 def _rows(conn: sqlite3.Connection, ids: list[str]) -> dict[str, dict]:
@@ -109,48 +138,29 @@ def _rows(conn: sqlite3.Connection, ids: list[str]) -> dict[str, dict]:
 
 
 def dense(store, query: str, k: int) -> list[ScoredChunk]:
-    return [_scored(row, s, "cosine", store.name) for row, s in store.search(query, k)]
+    out = [_scored(row, s, "cosine", store.name) for row, s in store.search(query, k)]
+    for rank, c in enumerate(out, start=1):
+        c.signals.update(dense_rank=rank, cosine=c.score)
+    return out
 
 
 def rrf(*rankings: list[ScoredChunk], k: int) -> list[ScoredChunk]:
     scores: dict[str, float] = {}
     first: dict[str, ScoredChunk] = {}
+    signals: dict[str, dict] = {}
     for ranking in rankings:
         for rank, chunk in enumerate(ranking, start=1):
             scores[chunk.chunk_id] = scores.get(chunk.chunk_id, 0.0) + 1.0 / (RRF_K + rank)
             first.setdefault(chunk.chunk_id, chunk)
+            signals.setdefault(chunk.chunk_id, {}).update(chunk.signals)
     fused = sorted(scores, key=lambda cid: -scores[cid])[:k]
     out = []
     for cid in fused:
         c = first[cid]
         out.append(ScoredChunk(c.chunk_id, c.source_id, c.page, c.section, c.text, c.token_count, c.language,
-                               round(scores[cid], 5), "reciprocal-rank fusion", f"fts5+{c.store}"))
+                               round(scores[cid], 5), "reciprocal-rank fusion", f"fts5+{c.store}",
+                               signals={**signals[cid], "rrf": round(scores[cid], 5)}))
     return out
-
-
-def rerank(settings, query: str, candidates: list[ScoredChunk], k: int, session=None) -> tuple[list[ScoredChunk], str]:
-    import requests
-
-    if not settings.has_nim:
-        return candidates[:k], "reranker skipped (no NIM key or offline mode); dense order kept"
-    model = settings.rerank_model
-    url = f"https://ai.api.nvidia.com/v1/retrieval/{model}/reranking"
-    body = {"model": model, "query": {"text": query}, "passages": [{"text": c.text} for c in candidates]}
-    try:
-        http = session or requests
-        response = http.post(url, json=body, timeout=30,
-                             headers={"Authorization": f"Bearer {settings.nemotron_api_key}", "Accept": "application/json"})
-    except requests.RequestException as exc:
-        return candidates[:k], f"reranker unavailable ({type(exc).__name__}); dense order kept"
-    if response.status_code != 200:
-        return candidates[:k], f"reranker unavailable (HTTP {response.status_code}); dense order kept"
-    ranked = sorted(response.json().get("rankings", []), key=lambda r: -r["logit"])[:k]
-    out = []
-    for r in ranked:
-        c = candidates[r["index"]]
-        out.append(ScoredChunk(c.chunk_id, c.source_id, c.page, c.section, c.text, c.token_count, c.language,
-                               round(float(r["logit"]), 4), "reranker logit", c.store))
-    return out, f"reranked by {model}"
 
 
 def judge(settings, query: str, candidates: list[ScoredChunk], k: int, decider=None) -> tuple[list[ScoredChunk], list[ScoredChunk], str]:
@@ -193,9 +203,22 @@ def _long_context(query: str, settings, conn, started: float) -> RetrievalResult
             conn.close()
 
 
+def _first_stage(base: str, conn, vector_store, query: str, n: int, notes: list[str]) -> list[ScoredChunk]:
+    if base == "lexical":
+        chunks, how = lexical(conn, query, n)
+        notes.append(how)
+        return chunks
+    if base == "dense":
+        return dense(vector_store, query, n)
+    lex, how = lexical(conn, query, n * 3 if n <= 10 else n)
+    notes.append(how)
+    return rrf(lex, dense(vector_store, query, n * 3 if n <= 10 else n), k=n)
+
+
 def retrieve(query: str, settings, conn: sqlite3.Connection | None = None, embedder=None, mode: str | None = None,
              store: str | None = None, k: int | None = None, decider=None, session=None) -> RetrievalResult:
     from .embeddings import get_embedder
+    from .rerank import rerank
     from .stores.base import get_store
 
     started = time.perf_counter()
@@ -205,6 +228,8 @@ def retrieve(query: str, settings, conn: sqlite3.Connection | None = None, embed
     if mode not in MODES:
         raise ValueError(f"unknown retrieval mode {mode!r}; modes: {', '.join(MODES)}")
     k = int(k or settings.profile.get("rag.top_k", 4))
+    pool = max(k, int(settings.profile.get("rag.candidates", 20)))
+    base, _, second = mode.partition("+")
     own_conn = conn is None
     conn = conn or kb.connect()
     embedder = embedder or get_embedder(settings)
@@ -212,33 +237,36 @@ def retrieve(query: str, settings, conn: sqlite3.Connection | None = None, embed
     notes: list[str] = []
     dropped: list[ScoredChunk] = []
     try:
-        if mode == "lexical":
-            chunks, how = lexical(conn, query, k)
-            notes.append(how)
+        vector_store = None if base == "lexical" else get_store(store_name, embedder, conn)
+        if base == "lexical":
             store_name = "fts5"
-        else:
-            vector_store = get_store(store_name, embedder, conn)
-            if mode == "dense":
-                chunks = dense(vector_store, query, k)
-            elif mode == "hybrid":
-                lex, how = lexical(conn, query, k * 3)
-                chunks = rrf(lex, dense(vector_store, query, k * 3), k=k)
-                notes.append(how)
-            elif mode == "dense+rerank":
-                chunks, note = rerank(settings, query, dense(vector_store, query, k * 3), k, session=session)
-                notes.append(note)
-            else:
-                chunks, dropped, note = judge(settings, query, dense(vector_store, query, k * 2), k, decider)
-                notes.append(note)
+        size = pool if second == "rerank" else (k * 2 if second == "judge" else k)
+        candidates = _first_stage(base, conn, vector_store, query, size, notes)
         if not settings.profile.get("data.include_adversarial", False):
             # the poisoned E13 document may sit in the knowledge base; only E13 profiles retrieve it
-            chunks = [c for c in chunks if not c.source_id.startswith("adversarial-")]
+            candidates = [c for c in candidates if not c.source_id.startswith("adversarial-")]
+        log.info("retrieve %s @ %s: %d candidates for %r", mode, store_name, len(candidates), query)
+        for rank, c in enumerate(candidates, start=1):
+            log.debug("  candidate %2d  %s", rank, c.describe())
+        if second == "rerank":
+            outcome = rerank(settings, query, candidates, k, decider=decider, session=session)
+            chunks, notes = outcome.chunks, notes + outcome.notes
+            dropped = outcome.below_threshold
+        elif second == "judge":
+            chunks, dropped, note = judge(settings, query, candidates, k, decider)
+            notes.append(note)
+        else:
+            chunks = candidates[:k]
         for rank, c in enumerate(chunks, start=1):
             c.rank = rank
-        if embedder.offline and mode != "lexical":
+        if embedder.offline and base != "lexical":
             notes.append("dense vectors come from the offline hashing encoder")
-        return RetrievalResult(query, mode, store_name, chunks, round((time.perf_counter() - started) * 1000, 1),
-                               notes, dropped)
+        latency = round((time.perf_counter() - started) * 1000, 1)
+        log.info("retrieve kept %d of %d in %.0f ms%s", len(chunks), len(candidates), latency,
+                 f" ({'; '.join(notes)})" if notes else "")
+        for c in chunks:
+            log.info("  context %s", c.describe())
+        return RetrievalResult(query, mode, store_name, chunks, latency, notes, dropped, len(candidates))
     finally:
         if own_conn:
             conn.close()

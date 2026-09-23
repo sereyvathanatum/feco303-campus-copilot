@@ -44,12 +44,15 @@ model_routing = "off"          # off | jev_complexity             (E12)
 [rag]
 chunk_size = 220               # tokens (or characters when length_unit = chars)
 chunk_overlap = 30
-top_k = 4
+top_k = 5                      # passages sent to the model, best first
+candidates = 20                # first-stage pool that the reranker scores (+rerank modes)
 length_unit = "tokens"         # tokens | chars                   (E02)
 tokenizer = "auto"             # auto | hf | tiktoken | builtin
 embed_max_tokens = 32768       # E02 sets 256 to mimic a small-window embedder
 swap_input_type = false        # deliberate bug for E02
-mode = "hybrid"                # lexical | dense | hybrid | dense+rerank | dense+judge (E03)
+mode = "hybrid+rerank"         # lexical | dense | hybrid | dense+rerank | hybrid+rerank | dense+judge (E03)
+reranker = "auto"              # auto | nim | jev | local   (auto = nim with a NIM key, else local)
+rerank_min_relevance = 0.0     # drop reranked passages below this relevance (0-1); 0 keeps the top_k
 store = "sqlite"               # sqlite | sqlite_vec | chroma      (E03)
 condense_query = "jev_gated"   # jev_gated | always | off         (E09)
 passage_filter = true          # Jev passage questions (active with the guards capability)
@@ -63,6 +66,8 @@ include_adversarial = false    # E13
 sources = ["data/sources", "data/inbox"]
 until = "verify"               # gather | extract | clean | chunk | embed | store | verify
 markdown_split = "headers+tokens"   # headers+tokens | tokens
+tables = "markdown"            # markdown | rows | text: split tables between rows, header in every piece
+context_header = "markdown"    # off | markdown | all: breadcrumb line "# Title › Section" atop each chunk
 embed_batch_size = 16
 requests_per_minute = 35       # client-side limiter, under the NIM free-tier rate
 

@@ -93,7 +93,14 @@ def sources_markdown(result: dict | None) -> str:
     for s in result.get("sources") or []:
         judge = s.get("judge")
         verdict = f" · judge relevant {judge.get('relevant', 0):.2f}, injection {judge.get('injection', 0):.2f}" if judge else ""
-        lines.append(f"- **{s['citation']}** · {s['score_type']} {s['score']:.3f} · {s['token_count']} tokens{verdict}\n"
+        signals = s.get("signals") or {}
+        ranks = " · ".join(part for part in (
+            f"relevance {signals['relevance']:.3f} ({signals.get('reranker')})" if "relevance" in signals else "",
+            f"lexical #{signals['lexical_rank']}" if "lexical_rank" in signals else "",
+            f"dense #{signals['dense_rank']}" if "dense_rank" in signals else "") if part)
+        status = {True: " · sent to the model", False: " · **dropped by the passage filter**"}.get(s.get("in_context"), "")
+        lines.append(f"- **#{s.get('rank', '-')} {s['citation']}** · {s['score_type']} {s['score']:.3f} · "
+                     f"{s['token_count']} tokens{verdict}{status}" + (f"  \n  {ranks}" if ranks else "") + "\n"
                      f"  > {s['text'][:280].replace(chr(10), ' ')}")
     return "\n".join(lines) or "No sources for this turn."
 

@@ -65,7 +65,7 @@ def verify_stage(conn: sqlite3.Connection, manifest: list[dict], chunks: list[di
     probes = [p for p in load_probes(generated_probes, extra_files) if p["source_id"] in ingested]
     results = []
     mode = settings.profile.get("rag.mode", "hybrid")
-    if mode in {"dense+judge", "dense+rerank"}:
+    if "+" in mode:
         mode = "hybrid"  # verify measures the index itself, without judge or reranker calls
     for probe in probes:
         found = retrieve(probe["question"], settings, conn=conn, embedder=embedder, mode=mode, k=k)

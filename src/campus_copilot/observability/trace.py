@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import logging
 import re
 import threading
 import time
@@ -30,6 +31,7 @@ SECRET_PATTERNS = [
     re.compile(r"(?i)(typesafe_api_key\s*[=:]\s*)[^\s\"',]+"),
 ]
 ACCOUNT_ID = re.compile(r"\bA\d{4}\b")
+log = logging.getLogger("campus_copilot.trace")
 
 
 def redact_text(text: str) -> str:
@@ -115,6 +117,12 @@ class Tracer:
             self.spans.append(item)
             if self.write:
                 self._append(item)
+            if log.isEnabledFor(logging.INFO):
+                from .logs import span_line
+
+                row = item.as_dict()
+                log.info(span_line(row))
+                log.debug("span %s attributes: %s", item.span, json.dumps(row, ensure_ascii=False, default=str))
 
     def _append(self, item: Span) -> None:
         folder = config.runs_dir() / "traces"

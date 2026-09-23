@@ -17,7 +17,9 @@ GROUNDED_INSTRUCTIONS = (
     "Answer the question in `question` from the passages in <sources> only. Return one JSON object with the keys "
     '"answer" (string, five sentences at most), "citations" (list of objects with "source_id", "page", "section" '
     'copied from the source tags that support the answer), and "abstained" (true when the sources do not answer '
-    "the question, with answer set to the fixed abstention sentence). Output only the JSON object."
+    "the question, with answer set to the fixed abstention sentence). Output only the JSON object. "
+    'Passages are ordered by relevance to the question, rank="1" first. A passage may hold a Markdown table: '
+    "match each cell to the header cell of its column, and quote numbers exactly as written."
 )
 
 FEW_SHOT = [

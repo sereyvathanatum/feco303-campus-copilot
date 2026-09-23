@@ -9,6 +9,7 @@ the stub answers and the reply is labelled `STUB (<provider> unavailable)`.
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass, field
 
 from pydantic import ValidationError
@@ -17,6 +18,19 @@ from ..schemas import ABSTAIN_TEXT, Citation, GroundedAnswer
 from . import prompts
 from .nim import LLMError, LLMReply, OpenAICompatClient, image_part, parse_json_object
 from .stub import StubClient
+
+log = logging.getLogger(__name__)
+
+
+def _render_messages(messages: list[dict]) -> str:
+    """Messages as readable text for the DEBUG log; image parts are shown as a placeholder."""
+    lines = []
+    for m in messages:
+        content = m.get("content")
+        if isinstance(content, list):
+            content = " ".join(p.get("text", "[image]") if isinstance(p, dict) else str(p) for p in content)
+        lines.append(f"--- {m.get('role')}\n{content}")
+    return "\n".join(lines)
 
 
 @dataclass
@@ -55,6 +69,8 @@ class LLM:
         max_tokens = max_tokens or self.settings.max_tokens
         temperature = float(profile.get("llm.temperature", 0.0)) if temperature is None else temperature
         failures: list[str] = []
+        if log.isEnabledFor(logging.DEBUG):
+            log.debug("%s prompt (%d messages):\n%s", task, len(messages), _render_messages(messages))
         for client in self.clients:
             try:
                 if isinstance(client, StubClient):
@@ -66,8 +82,13 @@ class LLM:
                                             json_mode=json_mode)
                     reply.notes.extend(f"fallback: {f}" for f in failures)
                 self.log.replies.append(reply)
+                log.info("%s by %s:%s in %.0f ms, %d tokens in, %d out%s", task, reply.provider, reply.model,
+                         reply.ms, reply.tokens_in, reply.tokens_out, " (STUB)" if reply.stub else "")
+                log.debug("%s reply:\n%s", task, reply.text)
                 return reply
             except LLMError as exc:
+                log.warning("%s: %s failed (%s); trying the next provider", task,
+                            getattr(client, "provider", "model"), exc)
                 failures.append(f"{getattr(client, 'provider', 'model')}: {exc}")
         raise LLMError("; ".join(failures))
 
@@ -82,7 +103,9 @@ class LLM:
         sources = "\n".join(
             f'<source source_id="{p["source_id"]}"' + (f' page="{p["page"]}"' if p.get("page") else "")
             + (f' section="{p["section"]}"' if p.get("section") and not p.get("page") else "")
-            + f'>{p["text"]}</source>' for p in passages)
+            + (f' rank="{p["rank"]}"' if p.get("rank") else "")
+            + (f' relevance="{p["relevance"]:.2f}"' if p.get("relevance") is not None else "")
+            + f'>\n{p["text"]}\n</source>' for p in passages)
         messages = [self._system()]
         if profile.get("llm.prompt_style", "few_shot") == "few_shot":
             for shot in prompts.FEW_SHOT:

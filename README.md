@@ -108,9 +108,9 @@ All 14 run in one thread, in order (`data/demo_turns.jsonl`); `python -m campus_
 | `init-env`, `check` | set up `.env`; print mode, keys (state only), models, reachability |
 | `seed` | build the synthetic campus database |
 | `ingest [--until STAGE] [--store all] [--resume RUN] [--show STAGE --doc ID] [--remove ID]`, `ingest add FILE --licence ...` | the knowledge-base pipeline |
-| `retrieve "..." [--compare]` | retrieval only; `--compare` prints the Retrieval Lab table |
+| `retrieve "..." [--compare] [--full]` | retrieval only, with every ranking signal; `--compare` prints the Retrieval Lab table |
 | `decide "..."`, `jev-smoke` | decision-model playground; the reference call |
-| `ask "..." [--image FILE]`, `chat` | one turn; an interactive session with `/thread`, `/trace`, `/profile` |
+| `ask "..." [--image FILE] [--show-chunks [--full]]`, `chat` | one turn; an interactive session with `/thread`, `/trace`, `/chunks`, `/verbose`, `/profile` |
 | `step N [--demo \| --check \| --chat]`, `demo` | the build path; the scripted turns |
 | `tools` | tool specs |
 | `eval [--subset X] [--judges] [--vision]` | evaluation set, judges, vision field accuracy |
@@ -119,6 +119,8 @@ All 14 run in one thread, in order (`data/demo_turns.jsonl`); `python -m campus_
 | `ui [--share]` | the Gradio app (localhost only unless `--share`) |
 
 `--profile NAME` selects a profile from `profiles/`; `--set KEY=VALUE` changes one key for one run.
+`-v` prints one log line per step and the retrieval ranking on stderr; `-vv` adds every retrieval candidate
+and the full prompts; `--log-file PATH` (or `COPILOT_LOG_LEVEL` / `COPILOT_LOG_FILE`, for `ui`) keeps them.
 
 ## Tests
 

@@ -21,8 +21,15 @@ class AnswerResult:
 
 
 def passages_for(chunks: list[ScoredChunk]) -> list[dict]:
-    return [{"source_id": c.source_id, "page": c.page, "section": c.section if not c.page else None, "text": c.text}
-            for c in chunks]
+    """Passages in retrieval order (best first); rank and relevance travel into the <source> tags."""
+    out = []
+    for position, c in enumerate(chunks, start=1):
+        passage = {"source_id": c.source_id, "page": c.page, "section": c.section if not c.page else None,
+                   "text": c.text, "rank": c.rank or position}
+        if "relevance" in c.signals:
+            passage["relevance"] = c.signals["relevance"]
+        out.append(passage)
+    return out
 
 
 def answer(question: str, chunks: list[ScoredChunk], llm, history: list[dict] | None = None,

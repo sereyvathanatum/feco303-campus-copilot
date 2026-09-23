@@ -115,6 +115,16 @@ def test_incremental_runs(src):
     assert third["stages"]["verify"]["stats"]["passed"]
 
 
+def test_changed_chunk_settings_rechunk_unchanged_files(src):
+    run(make_settings(src))
+    again = run(make_settings(src, **{"ingest.tables": "rows"}))
+    gather = again["stages"]["gather"]["stats"]
+    assert gather["by_status"] == {"changed": 5}
+    assert all("chunk settings or chunker version changed: re-chunked" in f for f in gather["flagged"].values())
+    assert run(make_settings(src, **{"ingest.tables": "rows"}))["stages"]["gather"]["stats"]["by_status"] == {
+        "unchanged": 5}
+
+
 def test_removed_document_leaves_every_backend(src):
     settings = make_settings(src)
     run(settings, store="all")

@@ -112,13 +112,54 @@ def cmd_retrieve(args) -> int:
     from .rag.retrieve import retrieve
 
     result = retrieve(args.query, settings, mode=args.mode, store=args.store, k=args.k)
-    print(f"mode {result.mode} @ {result.store}; {result.latency_ms:.0f} ms; notes: {'; '.join(result.notes) or '-'}")
+    print(f"mode {result.mode} @ {result.store}; {result.candidates} candidates -> {len(result.chunks)} kept; "
+          f"{result.latency_ms:.0f} ms; notes: {'; '.join(result.notes) or '-'}")
     for c in result.chunks:
-        print(f"  {c.rank}. {c.citation} score {c.score:.4f} ({c.score_type}), {c.token_count} tokens")
-        print("     " + c.text[:160].replace("\n", " "))
+        _print_chunk(c.as_dict(), args.full)
     for c in result.dropped:
         print(f"  dropped: {c.citation} judge {c.judge}")
     return 0
+
+
+def _signal_text(source: dict) -> str:
+    s = source.get("signals") or {}
+    parts = []
+    if "relevance" in s:
+        parts.append(f"relevance {s['relevance']:.3f} ({s.get('reranker', 'rerank')})")
+    if "lexical_rank" in s:
+        parts.append(f"lexical #{s['lexical_rank']} bm25 {s['bm25']:.2f}")
+    if "dense_rank" in s:
+        parts.append(f"dense #{s['dense_rank']} cos {s['cosine']:.3f}")
+    if "rrf" in s:
+        parts.append(f"rrf {s['rrf']:.4f}")
+    if "first_stage_rank" in s:
+        parts.append(f"first-stage #{s['first_stage_rank']}")
+    judge = source.get("judge")
+    if judge:
+        parts.append(f"judge relevant {judge.get('relevant', 0):.2f} has_answer {judge.get('has_answer', 0):.2f}")
+    return " · ".join(parts)
+
+
+def _print_chunk(source: dict, full: bool = False) -> None:
+    marker = {True: "used", False: "DROPPED", None: ""}[source.get("in_context")]
+    print(f"  #{source.get('rank', '-')} {source['citation']}  {source['score_type']} {source['score']:.4f}  "
+          f"{source['token_count']} tok  {marker}".rstrip())
+    signals = _signal_text(source)
+    if signals:
+        print(f"      {signals}")
+    text = source["text"] if full else source["text"][:400] + (" …" if len(source["text"]) > 400 else "")
+    for line in text.splitlines():
+        print(f"      | {line}")
+
+
+def _print_chunks(result, full: bool = False) -> None:
+    if not result.sources:
+        print("  chunks: none retrieved for this turn")
+        return
+    used = sum(1 for s in result.sources if s.get("in_context", True))
+    print(f"  chunks: {len(result.sources)} retrieved, {used} sent to the model (best first)")
+    for source in result.sources:
+        _print_chunk(source, full)
 
 
 # ------------------------------------------------------------------ P3 commands
@@ -187,7 +228,7 @@ def cmd_jev_smoke(args) -> int:
 
 # ------------------------------------------------------------------ P5 commands
 
-def _print_turn(result, copilot, show_trace: bool = True) -> None:
+def _print_turn(result, copilot, show_trace: bool = True, show_chunks: bool = False, full: bool = False) -> None:
     badge = " [STUB]" if (result.decision or {}).get("stub") else ""
     print(f"\n{result.answer}\n")
     route = f"route {result.route}" if result.route else "no route"
@@ -204,6 +245,8 @@ def _print_turn(result, copilot, show_trace: bool = True) -> None:
         spans = copilot.trace(result.trace_id)
         timeline = ", ".join(f"{s['span']} {s['ms']:.0f}ms" for s in spans if s["span"] not in ("turn",))
         print(f"  trace: {timeline}")
+    if show_chunks:
+        _print_chunks(result, full)
 
 
 def _copilot(args, step: int | None = None):
@@ -229,7 +272,7 @@ def cmd_ask(args) -> int:
     copilot = _copilot(args)
     try:
         result = copilot.ask(args.message, thread_id=args.thread, account_id=args.account, image_path=args.image)
-        _print_turn(result, copilot)
+        _print_turn(result, copilot, show_chunks=args.show_chunks, full=args.full)
         if result.kind == "confirm":
             if args.yes or args.no:
                 _print_turn(copilot.resume(result.thread_id, bool(args.yes)), copilot)
@@ -249,8 +292,10 @@ def _chat(copilot, args) -> int:
     account = args.account or copilot.settings.profile.get("app.account_id", "A0001")
     print(f"{step_label(copilot.settings.profile)} | mode {copilot.settings.run_mode} | account {account} | "
           f"thread {thread}")
-    print("Commands: /thread (new thread), /trace (last trace), /profile NAME, /quit")
+    print("Commands: /thread (new thread), /trace (last trace), /chunks (toggle the retrieved-chunk view), "
+          "/verbose (toggle step logs), /profile NAME, /quit")
     last = None
+    show_chunks, full = bool(getattr(args, "show_chunks", False)), bool(getattr(args, "full", False))
     while True:
         try:
             message = input("> ").strip()
@@ -264,6 +309,19 @@ def _chat(copilot, args) -> int:
         if message == "/thread":
             thread = f"chat-{uuid.uuid4().hex[:6]}"
             print(f"new thread {thread}")
+            continue
+        if message == "/chunks":
+            show_chunks = not show_chunks
+            print(f"chunk view {'on' if show_chunks else 'off'}")
+            if show_chunks and last is not None:
+                _print_chunks(last, full)
+            continue
+        if message == "/verbose":
+            import logging
+
+            logger = logging.getLogger("campus_copilot")
+            logger.setLevel(logging.WARNING if logger.level <= logging.INFO else logging.INFO)
+            print(f"step logs {'on' if logger.level <= logging.INFO else 'off'}")
             continue
         if message == "/trace":
             for span in copilot.trace(last.trace_id) if last else []:
@@ -279,7 +337,7 @@ def _chat(copilot, args) -> int:
             print(f"profile {name}")
             continue
         last = copilot.ask(message, thread_id=thread, account_id=account)
-        _print_turn(last, copilot, show_trace=False)
+        _print_turn(last, copilot, show_trace=False, show_chunks=show_chunks, full=full)
         last = _confirm_loop(copilot, last)
     copilot.close()
     return 0
@@ -392,11 +450,27 @@ def cmd_ui(args) -> int:
 
 # ----------------------------------------------------------------------- parser
 
+def _log_flags(p: argparse.ArgumentParser) -> None:
+    p.add_argument("-v", "--verbose", dest="log_verbosity", action="count", default=0,
+                   help="verbose logs on stderr (-v, -vv); same as the global flag")
+
+
+def _chunk_flags(p: argparse.ArgumentParser) -> None:
+    _log_flags(p)
+    p.add_argument("--show-chunks", action="store_true",
+                   help="after each answer, list the retrieved chunks: rank, scores, and whether they reached the model")
+    p.add_argument("--full", action="store_true", help="with --show-chunks: print each chunk's full text")
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="campus_copilot.cli", description="CamTech Campus Copilot")
     parser.add_argument("--profile", help="profile name in profiles/ (default: COPILOT_PROFILE or baseline)")
     parser.add_argument("--set", action="append", metavar="KEY=VALUE",
                         help="override one profile key, for example --set rag.top_k=6")
+    parser.add_argument("-v", "--verbose", dest="log_verbosity_global", action="count", default=0,
+                        help="verbose logs on stderr: -v per-step lines and the retrieval ranking, -vv also "
+                             "every candidate and the full prompts (or COPILOT_LOG_LEVEL=INFO|DEBUG)")
+    parser.add_argument("--log-file", help="also append the logs to this file (or COPILOT_LOG_FILE)")
     sub = parser.add_subparsers(dest="command", required=True)
 
     sub.add_parser("init-env", help="copy .env.example to .env when .env is absent").set_defaults(func=cmd_init_env)
@@ -427,9 +501,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("retrieve", help="retrieval only, with scores; --compare prints the Retrieval Lab table")
     p.add_argument("query")
-    p.add_argument("--mode", choices=["lexical", "dense", "hybrid", "dense+rerank", "dense+judge"])
+    p.add_argument("--mode", choices=["lexical", "dense", "hybrid", "dense+rerank", "hybrid+rerank", "dense+judge"])
     p.add_argument("--store", choices=["sqlite", "sqlite_vec", "chroma"])
     p.add_argument("-k", type=int)
+    p.add_argument("--full", action="store_true", help="print each chunk's full text")
+    _log_flags(p)
     p.add_argument("--compare", action="store_true", help="every mode × available store, side by side")
     p.add_argument("--modes", help="with --compare: comma-separated modes")
     p.add_argument("--stores", help="with --compare: comma-separated stores")
@@ -451,15 +527,18 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--image", help="path to a photographed notice (vision capability)")
     p.add_argument("--yes", action="store_true", help="confirm a pending write")
     p.add_argument("--no", action="store_true", help="cancel a pending write")
+    _chunk_flags(p)
     p.set_defaults(func=cmd_ask)
 
-    p = sub.add_parser("chat", help="interactive session with /thread, /trace, /profile")
+    p = sub.add_parser("chat", help="interactive session with /thread, /trace, /chunks, /verbose, /profile")
     p.add_argument("--thread")
     p.add_argument("--account")
+    _chunk_flags(p)
     p.set_defaults(func=cmd_chat)
 
     p = sub.add_parser("demo", help="run the 14 scripted demo turns and print the scoreboard")
     p.add_argument("--confirm", action="store_true", help="confirm write turns instead of cancelling them")
+    _log_flags(p)
     p.set_defaults(func=cmd_demo)
 
     p = sub.add_parser("step", help="run the chatbot as it stands after build-path step N")
@@ -471,6 +550,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--confirm", action="store_true")
     p.add_argument("--thread")
     p.add_argument("--account")
+    _chunk_flags(p)
     p.set_defaults(func=cmd_step)
 
     sub.add_parser("tools", help="list tool specs").set_defaults(func=cmd_tools)
@@ -506,6 +586,9 @@ def main(argv: list[str] | None = None) -> int:
         except (ValueError, OSError):
             pass
     args = build_parser().parse_args(argv)
+    from .observability import logs
+
+    logs.setup(max(args.log_verbosity_global, getattr(args, "log_verbosity", 0) or 0), args.log_file)
     return int(args.func(args) or 0)
 
 

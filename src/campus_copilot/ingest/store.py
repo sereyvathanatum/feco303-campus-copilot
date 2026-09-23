@@ -19,7 +19,7 @@ from .. import config
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS documents (
     source_id TEXT PRIMARY KEY, file TEXT, sha256 TEXT, format TEXT, title TEXT, language TEXT,
-    licence TEXT, origin TEXT, pages INTEGER, status TEXT, ingested_at TEXT
+    licence TEXT, origin TEXT, pages INTEGER, status TEXT, ingested_at TEXT, recipe TEXT
 );
 CREATE TABLE IF NOT EXISTS chunks (
     chunk_id TEXT PRIMARY KEY, source_id TEXT NOT NULL, page INTEGER, section TEXT, text TEXT NOT NULL,
@@ -57,6 +57,8 @@ def connect(path: Path | None = None) -> sqlite3.Connection:
     conn = sqlite3.connect(path, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.executescript(SCHEMA)
+    if "recipe" not in {r[1] for r in conn.execute("PRAGMA table_info(documents)")}:
+        conn.execute("ALTER TABLE documents ADD COLUMN recipe TEXT")  # knowledge bases built before chunker v2
     if fts5_available():
         conn.execute("CREATE VIRTUAL TABLE IF NOT EXISTS chunks_fts USING fts5("
                      "text, chunk_id UNINDEXED, source_id UNINDEXED, tokenize='porter unicode61 remove_diacritics 2')")
@@ -118,9 +120,9 @@ def store_stage(conn: sqlite3.Connection, manifest: list[dict], chunks: list[dic
         if doc["source_id"] in processed:
             conn.execute(
                 """INSERT OR REPLACE INTO documents (source_id, file, sha256, format, title, language, licence, origin,
-                   pages, status, ingested_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'ingested', ?)""",
+                   pages, status, ingested_at, recipe) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'ingested', ?, ?)""",
                 (doc["source_id"], doc["file"], doc["sha256"], doc["format"], doc["title"], doc["language"],
-                 doc["licence"], doc["origin"], doc.get("pages"), now))
+                 doc["licence"], doc["origin"], doc.get("pages"), now, doc.get("recipe")))
     rows = [(c["chunk_id"], c["source_id"], c.get("page"), c.get("section"), c["text"], c["token_count"],
              c["position"], c.get("language"), c["chunk_hash"]) for c in chunks if c["source_id"] in processed]
     conn.executemany("INSERT OR REPLACE INTO chunks VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", rows)

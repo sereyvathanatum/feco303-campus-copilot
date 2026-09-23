@@ -45,7 +45,9 @@ class StubClient:
                 best, best_score = passage, score
         if best is None or best_score < ANSWER_COVERAGE:
             return json.dumps({"answer": ABSTAIN_TEXT, "citations": [], "abstained": True})
-        ranked = sorted(sentences(best["text"]), key=lambda s: -coverage(question, s))
+        # headings (the context breadcrumb) and table separator rows are not answer sentences
+        candidates = [s for s in sentences(best["text"]) if not s.startswith("#") and set(s) - set("|-: ")]
+        ranked = sorted(candidates, key=lambda s: -coverage(question, s))
         answer = " ".join(ranked[:2]) if ranked else best["text"][:300]
         citation = {"source_id": best["source_id"], "page": best.get("page"), "section": best.get("section")}
         return json.dumps({"answer": answer, "citations": [citation], "abstained": False}, ensure_ascii=False)

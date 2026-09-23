@@ -46,7 +46,7 @@ DEFAULTS = {
     "NIM_CHAT_MODEL": "google/gemma-4-31b-it",
     "NIM_SMALL_MODEL": "nvidia/nemotron-3.5-lightning-30b-a3b",
     "NIM_EMBED_MODEL": "nvidia/nemotron-3-embed-1b",
-    "NIM_RERANK_MODEL": "nvidia/llama-nemotron-rerank-1b-v2",
+    "NIM_RERANK_MODEL": "nvidia/llama-nemotron-rerank-vl-1b-v2",  # the text-only 1b-v2 reached end of life on 2026-08-25
     "NIM_TEMPERATURE": "0.0",
     "NIM_MAX_TOKENS": "512",
     "NIM_TIMEOUT": "60",

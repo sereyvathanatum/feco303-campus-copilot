@@ -15,6 +15,12 @@ def test_language_check_catches_planted_words():
     assert [w for _, w in hits] == [audience, pronoun]
 
 
+def test_roman_numeral_one_is_not_the_pronoun():
+    pronoun = "i".upper()
+    lines = [f"## {pronoun}. Programs", f"Term {pronoun} starts in May.", f"Then {pronoun} click."]
+    assert [n for n, _ in check_language.scan_text(lines)] == [3]
+
+
 def test_language_markers_switch_off_checking():
     hidden, shown = "w" + "e", "ou" + "r"
     lines = ["<!-- language-check: off -->", hidden, "<!-- language-check: on -->", shown]

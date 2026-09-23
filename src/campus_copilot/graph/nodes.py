@@ -6,6 +6,7 @@ cannot be serialised is kept in state, so the checkpointer can persist every tur
 
 from __future__ import annotations
 
+import logging
 import re
 import uuid
 
@@ -34,6 +35,7 @@ from . import arguments
 from .capabilities import Capabilities
 from .memory import jev_history, model_window
 
+log = logging.getLogger(__name__)
 SQL_ROUTES = {"timetable", "deadlines", "rooms", "library", "calendar"}
 PER_TURN_RESET = {"decision": None, "route": None, "action": None, "query": {}, "tool_calls": [],
                   "pending_write": None, "pending_call": None, "sources": [], "answer": "", "result": None,
@@ -261,17 +263,22 @@ class Nodes:
             with self.span(state, "retrieve", query=query) as rspan:
                 result = retrieve(query, rt.settings, conn=rt.kb_conn, embedder=rt.embedder, decider=rt.decider)
                 rspan.set(mode=result.mode, store=result.store, hits=[c.citation for c in result.chunks],
-                          latency=result.latency_ms)
+                          candidates=result.candidates, latency=result.latency_ms,
+                          ranking=[c.describe() for c in result.chunks], retrieval_notes=result.notes or None)
             chunks, dropped = result.chunks, []
             notes = list(result.notes)
             if use_judge and chunks and result.mode not in ("dense+judge", "long_context"):
                 with self.span(state, "judge_passages", decider=rt.decider.name) as jspan:
                     before = dict(rt.decider.usage_totals)
-                    verdicts = rt.decider.judge_passages(query, [c.text for c in chunks])
-                    jspan.set(**_usage_delta(rt.decider, before))
-                    keep = []
-                    for chunk, verdict in zip(chunks, verdicts):
+                    # the `jev` reranker has already asked the passage questions; ask only for the rest
+                    unjudged = [c for c in chunks if c.judge is None]
+                    for chunk, verdict in zip(unjudged, rt.decider.judge_passages(query, [c.text for c in unjudged])
+                                              if unjudged else []):
                         chunk.judge = verdict
+                    jspan.set(**_usage_delta(rt.decider, before), reused=len(chunks) - len(unjudged))
+                    keep = []
+                    for chunk in chunks:
+                        verdict = chunk.judge or {}
                         if verdict.get("injection", 0) > float(rt.profile.get("policy.passage_injection", 0.70)):
                             dropped.append(chunk)
                             notes.append(f"passage filter dropped {chunk.citation}: instructions aimed at the assistant")
@@ -281,6 +288,10 @@ class Nodes:
                             keep.append(chunk)
                     chunks = keep
                     jspan.set(kept=[c.citation for c in keep], dropped=[c.citation for c in dropped])
+                    for c in dropped:
+                        log.info("passage filter dropped %s (relevant %.2f, injection %.2f)", c.citation,
+                                 (c.judge or {}).get("relevant", 0.0), (c.judge or {}).get("injection", 0.0))
+            log.info("context for the model: %d passages, %d tokens", len(chunks), sum(c.token_count for c in chunks))
             llm = rt.llm
             decision = _decision(state)
             if rt.profile.get("llm.model_routing", "off") == "jev_complexity" and decision:
@@ -293,7 +304,8 @@ class Nodes:
                 span.record_llm(reply)
             notes += answered.notes
             kind = "abstain" if answered.grounded.abstained else "answer"
-            sources = [c.as_dict() for c in result.chunks]
+            used = {c.chunk_id for c in chunks}
+            sources = [{**c.as_dict(), "in_context": c.chunk_id in used} for c in result.chunks]
             span.set(kind=kind, citations=[c.render() for c in answered.grounded.citations])
             turn = TurnResult(kind=kind, answer=answered.text, route=state.get("route") or "handbook",
                               citations=answered.grounded.citations, sources=sources,

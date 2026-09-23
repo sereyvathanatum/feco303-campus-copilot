@@ -113,9 +113,62 @@ def test_every_mode_returns_labelled_results(pack_env, mode):
     assert any(c.source_id == "campus-handbook" and c.page == 6 for c in result.chunks)
 
 
-def test_reranker_is_skipped_offline(pack_env):
-    result = retrieve("library fines", offline(), mode="dense+rerank", k=3)
-    assert any("reranker skipped" in n for n in result.notes)
+def test_offline_rerank_uses_the_local_heuristic_and_orders_best_first(pack_env):
+    result = retrieve("library fines", offline(), mode="hybrid+rerank", k=5)
+    assert result.candidates > 5 and len(result.chunks) == 5
+    assert any("reranked" in n and "local" in n for n in result.notes)
+    scores = [c.score for c in result.chunks]
+    assert scores == sorted(scores, reverse=True) and [c.rank for c in result.chunks] == [1, 2, 3, 4, 5]
+    top = result.chunks[0].signals
+    assert top["reranker"] == "local" and {"first_stage_rank", "rrf", "relevance"} <= set(top)
+
+
+def test_nim_reranker_request_and_order(pack_env):
+    from campus_copilot.rag.rerank import rerank
+
+    settings = offline()
+    candidates = retrieve("library fines", settings, mode="hybrid", k=4).chunks
+    session = RecordingSession([FakeResponse(200, {"rankings": [
+        {"index": 2, "logit": 3.0}, {"index": 0, "logit": 1.0}, {"index": 3, "logit": -2.0}, {"index": 1, "logit": -5.0}]})])
+    settings.nvidia_api_key = settings.nemotron_api_key = "nvapi-" + "x" * 40
+    settings.profile.data.setdefault("app", {})["force_offline"] = False
+    outcome = rerank(settings, "library fines", candidates, k=3, session=session, backend="nim")
+    body = session.requests[0]["json"]
+    assert body["query"] == {"text": "library fines"} and len(body["passages"]) == 4 and body["truncate"] == "END"
+    assert [c.signals["first_stage_rank"] for c in outcome.chunks] == [3, 1, 4]
+    assert outcome.chunks[0].signals["relevance"] > 0.9
+
+
+def test_failed_nim_reranker_falls_back_to_local(pack_env):
+    from campus_copilot.rag.rerank import rerank
+
+    settings = offline()
+    candidates = retrieve("library fines", settings, mode="hybrid", k=4).chunks
+    settings.nvidia_api_key = settings.nemotron_api_key = "nvapi-" + "x" * 40
+    settings.profile.data.setdefault("app", {})["force_offline"] = False
+    outcome = rerank(settings, "library fines", candidates, k=2,
+                     session=RecordingSession([FakeResponse(410, {"title": "Gone"})]), backend="nim")
+    assert outcome.backend == "local" and len(outcome.chunks) == 2
+    assert any("HTTP 410" in n for n in outcome.notes)
+
+
+def test_jev_reranker_keeps_verdicts_for_the_passage_filter(pack_env):
+    from campus_copilot.decisions.base import get_decider
+    from campus_copilot.rag.rerank import rerank
+
+    settings = offline()
+    candidates = retrieve("library fines", settings, mode="hybrid", k=4).chunks
+    decider = get_decider(settings, kind="keyword")
+    outcome = rerank(settings, "library fines", candidates, k=4, decider=decider, backend="jev")
+    assert all(c.judge and "has_answer" in c.judge for c in outcome.chunks)
+
+
+def test_passages_carry_rank_and_relevance_into_the_prompt(pack_env):
+    from campus_copilot.rag.answer import passages_for
+
+    chunks = retrieve("library fines", offline(), mode="hybrid+rerank", k=3).chunks
+    passages = passages_for(chunks)
+    assert [p["rank"] for p in passages] == [1, 2, 3] and all("relevance" in p for p in passages)
 
 
 def test_lexical_matches_codes_and_numbers(pack_env):

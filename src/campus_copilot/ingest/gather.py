@@ -55,7 +55,10 @@ def source_folders(profile: Profile) -> list[Path]:
 
 
 def gather(conn: sqlite3.Connection, profile: Profile) -> tuple[list[dict], dict]:
+    from .chunk import recipe
+
     known = documents(conn)
+    current_recipe = recipe(profile)
     records: list[dict] = []
     skipped: list[dict] = []
     seen_hash: dict[str, str] = {}
@@ -113,6 +116,9 @@ def gather(conn: sqlite3.Connection, profile: Profile) -> tuple[list[dict], dict
                 status = "new"
             elif prior["sha256"] != digest:
                 status = "changed"
+            elif prior.get("recipe") != current_recipe:
+                status = "changed"
+                flags.append("chunk settings or chunker version changed: re-chunked")
             else:
                 status = "unchanged"
             records.append({
@@ -120,6 +126,7 @@ def gather(conn: sqlite3.Connection, profile: Profile) -> tuple[list[dict], dict
                 "title": row.get("title") or path.stem, "language": row.get("language") or "unknown",
                 "licence": licence or "unknown", "origin": row.get("origin", ""), "added": row.get("added", ""),
                 "sha256": digest, "bytes": size, "pages": pages, "status": status, "flags": flags,
+                "recipe": current_recipe,
             })
         if inbox_new_rows:
             existing = mf.read_manifest(mf.INBOX_MANIFEST)
