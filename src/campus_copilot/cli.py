@@ -121,6 +121,70 @@ def cmd_retrieve(args) -> int:
     return 0
 
 
+# ------------------------------------------------------------------ P3 commands
+
+def _bar(value: float, width: int = 20) -> str:
+    filled = int(round(max(0.0, min(1.0, value)) * width))
+    return "#" * filled + "." * (width - filled)
+
+
+def cmd_decide(args) -> int:
+    from .db import connection, queries
+    from .decisions import policy
+    from .decisions import questions as qcat
+    from .decisions.base import get_decider
+
+    settings = _settings(args)
+    conn = connection.read_connection()
+    account = args.account or settings.profile.get("app.account_id", "A0001")
+    catalogue = qcat.turn_catalogue(queries.course_codes(conn))
+    decider = get_decider(settings, kind=args.decider)
+    state = qcat.turn_state(args.message, [], account, queries.enrolled_courses(conn, account))
+    decision = decider.decide(state, qcat.wire(catalogue))
+    badge = " [STUB]" if decision.stub else ""
+    print(f"decider: {decider.name}{badge}  model: {decision.model}  {decision.ms:.0f} ms  usage: {decision.usage}")
+    if not decision.ok:
+        print(f"request failed: HTTP {decision.status}: {decision.error}")
+        return 1
+    for qid, question in catalogue.items():
+        answer = decision.get(qid)
+        if question.type == "noul":
+            value = float(answer.get("noul", 0))
+            print(f"  {qid:<18} noul   {value:5.2f} {_bar(value)}")
+        elif question.type == "choice":
+            print(f"  {qid:<18} choice {answer.get('choice')} (confidence {float(answer.get('confidence', 0)):.2f})")
+            probs = sorted((answer.get("probabilities") or {}).items(), key=lambda kv: -kv[1])[:4]
+            for option, p in probs:
+                print(f"      {option:<16} {p:5.2f} {_bar(p)}")
+        else:
+            levels = len(question.spec["criteria"]) - 1
+            value = float(answer.get("score", 0))
+            print(f"  {qid:<18} score  {value:5.2f} of {levels} {_bar(value / levels if levels else 0)}")
+    action = policy.decide_action(decision, policy.Thresholds.from_profile(settings.profile),
+                                  offices=settings.profile.get("campus.offices", {}))
+    print(f"policy -> {action.kind}: {action.reason}" + (f"\n  reply: {action.reply}" if action.reply else ""))
+    return 0
+
+
+def cmd_jev_smoke(args) -> int:
+    from .decisions.jev import smoke
+
+    settings = _settings(args)
+    if not settings.has_jev:
+        print("TYPESAFE_API_KEY is missing or a placeholder; set it in .env to call Jev.")
+        return 1
+    decision, info = smoke(settings)
+    if not decision.ok:
+        print(f"Jev request failed: HTTP {decision.status}: {decision.error}")
+        return 1
+    urgency = decision.noul("urgency")
+    print(f"noul (urgency): {urgency:.2f}")
+    print(f"model: {decision.model}")
+    print(f"usage: {decision.usage}")
+    print(f"latency: {info['ms']:.0f} ms")
+    return 0
+
+
 # ----------------------------------------------------------------------- parser
 
 def build_parser() -> argparse.ArgumentParser:
@@ -165,6 +229,15 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--modes", help="with --compare: comma-separated modes")
     p.add_argument("--stores", help="with --compare: comma-separated stores")
     p.set_defaults(func=cmd_retrieve)
+
+    p = sub.add_parser("decide", help="decision playground: every question's answer, distribution, confidence")
+    p.add_argument("message")
+    p.add_argument("--decider", choices=["jev", "keyword", "llm"], help="default: router.kind from the profile")
+    p.add_argument("--account", help="session account (default: app.account_id)")
+    p.set_defaults(func=cmd_decide)
+
+    sub.add_parser("jev-smoke", help="send the Jev reference request; print noul, model, usage, latency"
+                   ).set_defaults(func=cmd_jev_smoke)
 
     return parser
 

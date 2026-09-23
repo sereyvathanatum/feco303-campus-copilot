@@ -14,10 +14,17 @@ _SENTENCE = re.compile(r"(?<=[.!?។])\s+|\n+")
 
 
 def stem(word: str) -> str:
-    for suffix in ("ings", "ing", "ies", "ied", "ed", "es", "s"):
+    """A crude suffix stripper: enough to match 'fines'/'fine', 'sessions'/'session', 'classes'/'class'."""
+    if len(word) <= 3:
+        return word
+    for suffix, keep in (("ies", "y"), ("ied", "y"), ("ings", ""), ("ing", ""), ("ed", "")):
         if word.endswith(suffix) and len(word) - len(suffix) >= 3:
-            base = word[: -len(suffix)]
-            return base + "y" if suffix in {"ies", "ied"} else base
+            return word[: -len(suffix)] + keep
+    for sibilant in ("sses", "shes", "ches", "xes", "zes"):
+        if word.endswith(sibilant):
+            return word[:-2]
+    if word.endswith("s") and not word.endswith("ss"):
+        return word[:-1]
     return word
 
 
