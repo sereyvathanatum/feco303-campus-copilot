@@ -340,8 +340,9 @@ class Nodes:
         rt = self.rt
         with self.span(state, "single_tool") as span:
             reading = state.get("image_reading") or {}
+            image_event = {**reading["event"], "_flagged": reading.get("flagged", [])} if reading.get("event") else None
             proposal = arguments.propose(state.get("route") or "", state.get("decision") or {}, state["message"],
-                                         self.window(state), state.get("slots") or {}, rt.today, reading.get("event"))
+                                         self.window(state), state.get("slots") or {}, rt.today, image_event)
             span.set(tool=proposal.tool, args=proposal.args, reason=proposal.reason)
             if proposal.clarify or not proposal.tool:
                 text = proposal.clarify or prompts.CLARIFY_GENERIC

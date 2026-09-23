@@ -333,6 +333,14 @@ class StubDecider(DeciderMixin):
                 text = str(ctx.state.get("transcription") or "").lower()
                 if not value:
                     return noul_answer(0.05)
+                iso = re.fullmatch(r"(\d{4})-(\d{2})-(\d{2})", value)
+                if iso:  # a date is supported when its year, day, and month (name or number) appear
+                    year, month, day = iso.groups()
+                    names = ["january", "february", "march", "april", "may", "june", "july", "august", "september",
+                             "october", "november", "december"]
+                    ok = (year in text and re.search(rf"\b0?{int(day)}\b", text) and
+                          (names[int(month) - 1] in text or f"-{month}-" in text or f"/{month}/" in text))
+                    return noul_answer(0.93 if ok else 0.12)
                 parts = [p for p in re.split(r"[\s,:\-–]+", value) if p]
                 found = sum(1 for p in parts if p in text) / max(1, len(parts))
                 return noul_answer(0.95 if found >= 0.8 else 0.1 + 0.5 * found)

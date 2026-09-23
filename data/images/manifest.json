@@ -1,0 +1,122 @@
+{
+  "poster_clean.png": {
+    "variant": "clean",
+    "truth": {
+      "transcription": "CamTech AI Seminar\nKhmer Speech Recognition in Practice\nFriday 16 October 2026\n16:00 - 17:30\nRoom A-101, Building A\nFree entry - demo poster, synthetic event",
+      "event": {
+        "title": "AI Seminar: Khmer Speech Recognition in Practice",
+        "date": "2026-10-16",
+        "start": "16:00",
+        "end": "17:30",
+        "location": "A-101"
+      }
+    },
+    "stub_reading": {
+      "transcription": "CamTech AI Seminar\nKhmer Speech Recognition in Practice\nFriday 16 October 2026\n16:00 - 17:30\nRoom A-101, Building A\nFree entry - demo poster, synthetic event",
+      "event": {
+        "title": "AI Seminar: Khmer Speech Recognition in Practice",
+        "date": "2026-10-16",
+        "start": "16:00",
+        "end": "17:30",
+        "location": "A-101"
+      }
+    }
+  },
+  "poster_blurred.png": {
+    "variant": "blur",
+    "truth": {
+      "transcription": "CamTech AI Seminar\nKhmer Speech Recognition in Practice\nFriday 16 October 2026\n16:00 - 17:30\nRoom A-101, Building A\nFree entry - demo poster, synthetic event",
+      "event": {
+        "title": "AI Seminar: Khmer Speech Recognition in Practice",
+        "date": "2026-10-16",
+        "start": "16:00",
+        "end": "17:30",
+        "location": "A-101"
+      }
+    },
+    "stub_reading": {
+      "transcription": "CamTech AI Seminar\nKhmer Speech Recognition in Practice\nFriday 16 October 2026\n18:00 - 17:30\nRoom A-101, Building A\nFree entry - demo poster, synthetic event",
+      "event": {
+        "title": "AI Seminar: Khmer Speech Recognition in Practice",
+        "date": "2026-10-16",
+        "start": "18:00",
+        "end": "17:30",
+        "location": "A-101"
+      }
+    },
+    "failure": "blur hides digits: the start time is misread"
+  },
+  "poster_rotated.png": {
+    "variant": "rotation",
+    "truth": {
+      "transcription": "CamTech AI Seminar\nKhmer Speech Recognition in Practice\nFriday 16 October 2026\n16:00 - 17:30\nRoom A-101, Building A\nFree entry - demo poster, synthetic event",
+      "event": {
+        "title": "AI Seminar: Khmer Speech Recognition in Practice",
+        "date": "2026-10-16",
+        "start": "16:00",
+        "end": "17:30",
+        "location": "A-101"
+      }
+    },
+    "stub_reading": {
+      "transcription": "CamTech AI Seminar\nKhmer Speech Recognition in Practice\nFriday 16 October 2026\n16:00 - 17:30\n\nFree entry - demo poster, synthetic event",
+      "event": {
+        "title": "AI Seminar: Khmer Speech Recognition in Practice",
+        "date": "2026-10-16",
+        "start": "16:00",
+        "end": "17:30",
+        "location": "B-101"
+      }
+    },
+    "failure": "rotation breaks reading order: the room line is lost and a room is guessed"
+  },
+  "poster_khmer.png": {
+    "variant": "khmer",
+    "note": "rendered without complex-script shaping (Pillow built without raqm), so Khmer glyphs may be misordered",
+    "truth": {
+      "transcription": "CamTech AI Seminar\nសិក្ខាសាលា AI\nថ្ងៃសុក្រ ទី១៦ តុលា ២០២៦\n16:00 - 17:30\nបន្ទប់ A-101\ndemo poster, synthetic event",
+      "event": {
+        "title": "CamTech AI Seminar",
+        "date": "2026-10-16",
+        "start": "16:00",
+        "end": "17:30",
+        "location": "A-101"
+      }
+    },
+    "stub_reading": {
+      "transcription": "CamTech AI Seminar\n16:00 - 17:30\nA-101",
+      "event": {
+        "title": "CamTech AI Seminar",
+        "date": "2026-10-26",
+        "start": "16:00",
+        "end": "17:30",
+        "location": "A-101"
+      }
+    },
+    "failure": "Khmer digits and month name misread: the date is wrong"
+  },
+  "timetable_dense.png": {
+    "variant": "dense_table",
+    "truth": {
+      "transcription": "FECO303 lab Thursday 13:30 C-301",
+      "event": {
+        "title": "FECO303 lab",
+        "date": null,
+        "start": "13:30",
+        "end": null,
+        "location": "C-301"
+      }
+    },
+    "stub_reading": {
+      "transcription": "Week timetable FECO303 13:30 C-301 FESE311 C-301",
+      "event": {
+        "title": "FECO303 lab",
+        "date": null,
+        "start": "13:30",
+        "end": null,
+        "location": "D-101"
+      }
+    },
+    "failure": "dense table: rows and columns mixed up; the room comes from another row"
+  }
+}

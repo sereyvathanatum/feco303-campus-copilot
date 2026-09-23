@@ -99,7 +99,13 @@ def propose(route: str, decision: dict, message: str, history: list[dict], slots
                                           if v is not None}, "deadline lookup")
     if route == "calendar":
         if wants_change:
-            event = image_event or {}
+            event = dict(image_event or {})
+            flagged = event.pop("_flagged", []) or []
+            if flagged:
+                fields = ", ".join(flagged)
+                return Proposal(None, {}, f"unverified fields: {fields}",
+                                f"The notice was read, but these fields could not be verified against its text: "
+                                f"{fields}. Which values are correct?")
             if not event.get("title") or not event.get("date"):
                 return Proposal(None, {}, "no event details", "Which event: a title and a date are needed.")
             return Proposal("add_event", {k: v for k, v in event.items() if v}, "event from the notice")

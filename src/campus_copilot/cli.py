@@ -354,6 +354,12 @@ def cmd_eval(args) -> int:
     from .evaluation.runner import run_eval
 
     settings = _settings(args)
+    if args.vision:
+        from .evaluation.vision import render, run_vision_eval
+        from .graph.nodes import Runtime
+
+        print(render(run_vision_eval(Runtime(settings))))
+        return 0
     run = run_eval(settings, subset=args.subset, judges=args.judges, echo=print if args.verbose else None)
     print(run.report())
     if args.judges:
@@ -472,6 +478,7 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("eval", help="run the evaluation set; summary per category and per language")
     p.add_argument("--subset", help="category, tag, case ID, or 'routing' (the seed-routing cases); comma-separated")
     p.add_argument("--judges", action="store_true", help="also run the LLM and decision-model faithfulness judges")
+    p.add_argument("--vision", action="store_true", help="E14: notice-reader field accuracy per synthetic image")
     p.add_argument("-v", "--verbose", action="store_true")
     p.set_defaults(func=cmd_eval)
 

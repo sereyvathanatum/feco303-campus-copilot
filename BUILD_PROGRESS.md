@@ -30,17 +30,19 @@ commit in this repository whose subject starts with the phase ID, so
 | P7 | Gradio UI | done | chat + 5 panels, Knowledge Base, Retrieval Lab, Confirm/Cancel; binds 127.0.0.1 (checked); turn driven over HTTP; `docs/ui-checklist.md`; live Jev demo 13/14 (turn 13 needs P10) |
 | P8 | observability and evaluation | done | 77 eval cases (11 local-language, 12 seed-routing); offline eval 3 s, 56/75 pass with the keyword stub; per-category and per-language tables; trace report with 1x/10x cost, unknown prices kept unknown; 3 judges |
 | P9 | guards and adversarial controls | done | poisoned document + poisoned API fixture; passage filter, tool-text filter, severity guard; 7/7 adversarial cases caught by their control offline and with live Jev; controls-off profile shows each attack succeed; step-11 checkpoint |
-| P10 | multimodal notice reader | in progress | |
-| P11 | build-path chapters, experiment sheets, docs | pending | |
+| P10 | multimodal notice reader | done | 5 synthetic images + manifest; reader with per-field decision checks and a time-range check; offline step 12 = 14/14; live Gemma 4 read the clean and Khmer posters correctly (Jev 0.97-0.99 per field); E14 table via `cli eval --vision` |
+| P11 | build-path chapters, experiment sheets, docs | in progress | ADR template written with P10 |
 | P12 | verify script, budgets, release notes | pending | |
 
 ## Next action
 
-P10: `scripts/make_images.py` (Pillow: clean, blurred, rotated, dense-table, Khmer-script posters and a
-timetable photo, plus `data/images/manifest.json` with ground truth and the stub reading), `multimodal/
-notice_reader.py` (VLM read -> transcription + ExtractedEvent; decision-model `<field>_supported` checks; blank
-unsupported fields), `add_event` confirm path (turn 13), step-12 checkpoint (14/14), E14 image-set results.
-Live check: Gemma 4 image reading through Google AI Studio.
+P11 (docs; all text impersonal, checked by `scripts/check_language.py`):
+- `docs/build-path/01-...md` to `12-...md` (template: plan §10.1; no numbers that checkpoints compute);
+- `experiments/README.md` + `E01`..`E15` sheets (template: plan §10.2) + the experiment profiles they name;
+- `experiments/_reference/` results (run offline; live where keys allow);
+- `docs/architecture.md` (exported Mermaid per step), `docs/setup_keys.md`, `docs/jev_primer.md`
+  (reference call + response shape), `docs/troubleshooting.md`; README tour.
+Then P12: `scripts/verify.py`, budget check, live smoke, CHANGELOG, tag.
 
 ## Build environment notes
 
