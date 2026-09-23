@@ -1,0 +1,58 @@
+{
+ "recorded_at": "2026-09-23T16:01:43",
+ "api": "wikipedia",
+ "url": "https://en.wikipedia.org/api/rest_v1/page/summary/Word_embedding",
+ "params": {
+  "title": "Word_embedding"
+ },
+ "note": "",
+ "response": {
+  "type": "standard",
+  "title": "Word embedding",
+  "displaytitle": "<span lang=\"en\" dir=\"ltr\"><span class=\"mw-page-title-main\">Word embedding</span></span>",
+  "namespace": {
+   "id": 0,
+   "text": ""
+  },
+  "wikibase_item": "Q18395344",
+  "titles": {
+   "canonical": "Word_embedding",
+   "normalized": "Word embedding",
+   "display": "<span lang=\"en\" dir=\"ltr\"><span class=\"mw-page-title-main\">Word embedding</span></span>"
+  },
+  "pageid": 43561218,
+  "thumbnail": {
+   "source": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fe/Word_embedding_illustration.svg/330px-Word_embedding_illustration.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+   "width": 330,
+   "height": 307
+  },
+  "originalimage": {
+   "source": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fe/Word_embedding_illustration.svg/250px-Word_embedding_illustration.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+   "width": 213,
+   "height": 198
+  },
+  "lang": "en",
+  "dir": "ltr",
+  "revision": "1374850731",
+  "tid": "6f2b6524-b037-11f1-b2c4-2260772a6310",
+  "timestamp": "2026-09-14T12:25:56Z",
+  "description": "Method in natural language processing",
+  "description_source": "local",
+  "content_urls": {
+   "desktop": {
+    "page": "https://en.wikipedia.org/wiki/Word_embedding",
+    "revisions": "https://en.wikipedia.org/wiki/Word_embedding?action=history",
+    "edit": "https://en.wikipedia.org/wiki/Word_embedding?action=edit",
+    "talk": "https://en.wikipedia.org/wiki/Talk:Word_embedding"
+   },
+   "mobile": {
+    "page": "https://en.wikipedia.org/wiki/Word_embedding",
+    "revisions": "https://en.wikipedia.org/wiki/Special:History/Word_embedding",
+    "edit": "https://en.wikipedia.org/wiki/Word_embedding?action=edit",
+    "talk": "https://en.wikipedia.org/wiki/Talk:Word_embedding"
+   }
+  },
+  "extract": "In natural language processing, a word embedding is a representation of a word. The embedding is used in text analysis. Typically, the representation is a real-valued vector that encodes the meaning of the word in such a way that the words that are closer in the vector space are expected to be similar in meaning. Word embeddings can be obtained using language modeling and feature learning techniques, where words or phrases from the vocabulary are mapped to vectors of real numbers.",
+  "extract_html": "<p>In natural language processing, a <b>word embedding</b> is a representation of a word. The embedding is used in text analysis. Typically, the representation is a real-valued vector that encodes the meaning of the word in such a way that the words that are closer in the vector space are expected to be similar in meaning. Word embeddings can be obtained using language modeling and feature learning techniques, where words or phrases from the vocabulary are mapped to vectors of real numbers.</p>"
+ }
+}

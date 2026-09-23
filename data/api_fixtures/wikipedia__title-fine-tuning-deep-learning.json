@@ -1,0 +1,48 @@
+{
+ "recorded_at": "2026-09-23T16:01:44",
+ "api": "wikipedia",
+ "url": "https://en.wikipedia.org/api/rest_v1/page/summary/Fine-tuning_(deep_learning)",
+ "params": {
+  "title": "Fine-tuning_(deep_learning)"
+ },
+ "note": "",
+ "response": {
+  "type": "standard",
+  "title": "Fine-tuning (deep learning)",
+  "displaytitle": "<span lang=\"en\" dir=\"ltr\"><span class=\"mw-page-title-main\">Fine-tuning (deep learning)</span></span>",
+  "namespace": {
+   "id": 0,
+   "text": ""
+  },
+  "wikibase_item": "Q117286419",
+  "titles": {
+   "canonical": "Fine-tuning_(deep_learning)",
+   "normalized": "Fine-tuning (deep learning)",
+   "display": "<span lang=\"en\" dir=\"ltr\"><span class=\"mw-page-title-main\">Fine-tuning (deep learning)</span></span>"
+  },
+  "pageid": 73250406,
+  "lang": "en",
+  "dir": "ltr",
+  "revision": "1361361008",
+  "tid": "8329ae2b-7228-11f1-9b2a-eca3b0e47190",
+  "timestamp": "2026-06-27T13:02:55Z",
+  "description": "Machine learning technique",
+  "description_source": "local",
+  "content_urls": {
+   "desktop": {
+    "page": "https://en.wikipedia.org/wiki/Fine-tuning_(deep_learning)",
+    "revisions": "https://en.wikipedia.org/wiki/Fine-tuning_(deep_learning)?action=history",
+    "edit": "https://en.wikipedia.org/wiki/Fine-tuning_(deep_learning)?action=edit",
+    "talk": "https://en.wikipedia.org/wiki/Talk:Fine-tuning_(deep_learning)"
+   },
+   "mobile": {
+    "page": "https://en.wikipedia.org/wiki/Fine-tuning_(deep_learning)",
+    "revisions": "https://en.wikipedia.org/wiki/Special:History/Fine-tuning_(deep_learning)",
+    "edit": "https://en.wikipedia.org/wiki/Fine-tuning_(deep_learning)?action=edit",
+    "talk": "https://en.wikipedia.org/wiki/Talk:Fine-tuning_(deep_learning)"
+   }
+  },
+  "extract": "In deep learning, fine-tuning is the process of adapting a computational model trained for one task to perform a different, usually more specific, task. It is considered a form of transfer learning, as it reuses knowledge learned from the original training objective.",
+  "extract_html": "<p>In deep learning, <b>fine-tuning</b> is the process of adapting a computational model trained for one task to perform a different, usually more specific, task. It is considered a form of transfer learning, as it reuses knowledge learned from the original training objective.</p>"
+ }
+}

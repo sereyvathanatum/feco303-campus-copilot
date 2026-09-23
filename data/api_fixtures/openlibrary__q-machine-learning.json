@@ -1,0 +1,103 @@
+{
+ "recorded_at": "2026-09-23T16:01:41",
+ "api": "openlibrary",
+ "url": "https://openlibrary.org/search.json",
+ "params": {
+  "q": "machine learning"
+ },
+ "note": "",
+ "response": {
+  "numFound": 7359,
+  "start": 0,
+  "numFoundExact": true,
+  "num_found": 7359,
+  "documentation_url": "https://openlibrary.org/dev/docs/api/search",
+  "q": "machine learning",
+  "offset": null,
+  "docs": [
+   {
+    "author_name": [
+     "Aurélien Géron"
+    ],
+    "first_publish_year": 2019,
+    "isbn": [
+     "9781098122461",
+     "9781492032649",
+     "1098122461",
+     "1098125975",
+     "1492032646",
+     "9781098122478",
+     "9781098125974",
+     "109812247X"
+    ],
+    "title": "Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow"
+   },
+   {
+    "author_name": [
+     "Kevin P. Murphy",
+     "Kevin P. Murphy"
+    ],
+    "first_publish_year": 2012,
+    "isbn": [
+     "9780262306164",
+     "0262305240",
+     "0262018020",
+     "0262306166",
+     "9780262304320",
+     "9780262018029",
+     "9780262305242",
+     "0262304325"
+    ],
+    "title": "Machine learning"
+   },
+   {
+    "author_name": [
+     "Ethem Alpaydin"
+    ],
+    "first_publish_year": 2016,
+    "isbn": [
+     "0262337592",
+     "9780262337588",
+     "9780262529518",
+     "9780262337595",
+     "9780262337601",
+     "0262337584",
+     "0262337606",
+     "0262529513"
+    ],
+    "title": "Machine learning"
+   },
+   {
+    "author_name": [
+     "Anil Ananthaswamy"
+    ],
+    "first_publish_year": 2024,
+    "isbn": [
+     "0593185749",
+     "9780593185766",
+     "0241586488",
+     "1802060863",
+     "9780593185742",
+     "9780241586488",
+     "0593185765",
+     "9781802060867"
+    ],
+    "title": "Why Machines Learn"
+   },
+   {
+    "author_name": [
+     "Andreas C. Mueller",
+     "Sarah Guido"
+    ],
+    "first_publish_year": 2016,
+    "isbn": [
+     "9789352134571",
+     "1449369413",
+     "9781449369415",
+     "9352134575"
+    ],
+    "title": "Introduction to Machine Learning with Python"
+   }
+  ]
+ }
+}

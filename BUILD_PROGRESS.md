@@ -24,8 +24,8 @@ commit in this repository whose subject starts with the phase ID, so
 | P2a | ingestion pipeline (7 stages), sources, handbook PDF | done | 19 sources, 117 chunks; offline verify hit@3 0.917, NIM verify hit@3 1.0; re-ingest 0 calls; step 1-4 checkpoints pass |
 | P2b | retrieval, stores, grounded answers, step 5 | partly done | 3 stores, 5 modes, `retrieve --compare`, LLM client (NIM + Google, stub fallback), grounded answers, condense; embedding-contract and store-parity tests pass. Remaining: `cli ask` + step-5 checkpoint, built with the P5 graph |
 | P3 | decisions: wire, questions, Jev client, stub, LLM router, policy | done | live `jev-smoke` 0.98 in 530 ms; 16 live turn decisions recorded in `data/fixtures/jev/` and replayed in tests; 26 decision tests |
-| P4 | tools and public APIs, fixtures | in progress | |
-| P5 | graph, memory, agent, confirm, `cli step`/`demo`/`chat` | pending | |
+| P4 | tools and public APIs, fixtures | done | 15 tools (10 campus incl. 3 writes, 4 public APIs, run_sql); live fixtures recorded 23 Sep 2026 + poisoned Wikipedia variant; 29 tool tests (success, empty, error, timeout) |
+| P5 | graph, memory, agent, confirm, `cli step`/`demo`/`chat` | in progress | |
 | P6 | MCP servers and transport switch | pending | |
 | P7 | Gradio UI | pending | |
 | P8 | observability and evaluation | pending | |
@@ -36,12 +36,11 @@ commit in this repository whose subject starts with the phase ID, so
 
 ## Next action
 
-P4: `tools/http.py` (session, timeouts, retries, User-Agent, requests-cache, fixture replay),
-`tools/registry.py` (one spec per tool -> native, JSON-protocol, MCP schemas), `tools/campus.py`
-(DB tools scoped to session account; write tools book_room/place_hold/add_event), `tools/public_apis.py`
-(Open-Meteo, ExchangeRate-API, Open Library, Wikipedia; attribution + fetched_at), `tools/text_to_sql.py`
-(E07 sandbox), `scripts/record_fixtures.py` (APIs + Jev), `data/api_fixtures/` incl. poisoned variants,
-tests: success/empty/error/timeout per tool. Then P5 graph (closes P2b: `cli ask`, step-5 checkpoint).
+P5: `data/demo_turns.jsonl` (14 turns + expected checks), `graph/arguments.py` (decision + regex -> tool args),
+`graph/nodes.py`, `graph/agent.py` (3 modes, repeat detector, max calls), risk gate + `interrupt()` confirm,
+`graph/build.py` (`Copilot.ask/resume`, SqliteSaver in runs/memory.db, capability-driven wiring, Mermaid export),
+`graph/demo.py` (scoreboard), `cli ask|chat|step N [--demo|--check|--chat]|demo|tools`, tests incl. step 5-10
+checkpoints and the expected scoreboard 2/3/7/11/13/13 (steps 5-10). This also closes P2b.
 
 Graph design already written: `graph/state.py`, `graph/memory.py`, `graph/capabilities.py`,
 `observability/trace.py`. Nodes and `graph/build.py` come in P5.

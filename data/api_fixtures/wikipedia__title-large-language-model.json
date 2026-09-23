@@ -1,0 +1,48 @@
+{
+ "recorded_at": "2026-09-23T16:01:43",
+ "api": "wikipedia",
+ "url": "https://en.wikipedia.org/api/rest_v1/page/summary/Large_language_model",
+ "params": {
+  "title": "Large_language_model"
+ },
+ "note": "",
+ "response": {
+  "type": "standard",
+  "title": "Large language model",
+  "displaytitle": "<span lang=\"en\" dir=\"ltr\"><span class=\"mw-page-title-main\">Large language model</span></span>",
+  "namespace": {
+   "id": 0,
+   "text": ""
+  },
+  "wikibase_item": "Q115305900",
+  "titles": {
+   "canonical": "Large_language_model",
+   "normalized": "Large language model",
+   "display": "<span lang=\"en\" dir=\"ltr\"><span class=\"mw-page-title-main\">Large language model</span></span>"
+  },
+  "pageid": 73248112,
+  "lang": "en",
+  "dir": "ltr",
+  "revision": "1375828927",
+  "tid": "67a3099e-b4d4-11f1-b3f2-7ac57915b94d",
+  "timestamp": "2026-09-20T09:19:39Z",
+  "description": "Type of machine learning model",
+  "description_source": "local",
+  "content_urls": {
+   "desktop": {
+    "page": "https://en.wikipedia.org/wiki/Large_language_model",
+    "revisions": "https://en.wikipedia.org/wiki/Large_language_model?action=history",
+    "edit": "https://en.wikipedia.org/wiki/Large_language_model?action=edit",
+    "talk": "https://en.wikipedia.org/wiki/Talk:Large_language_model"
+   },
+   "mobile": {
+    "page": "https://en.wikipedia.org/wiki/Large_language_model",
+    "revisions": "https://en.wikipedia.org/wiki/Special:History/Large_language_model",
+    "edit": "https://en.wikipedia.org/wiki/Large_language_model?action=edit",
+    "talk": "https://en.wikipedia.org/wiki/Talk:Large_language_model"
+   }
+  },
+  "extract": "A large language model (LLM) is an AI model trained on a vast amount of text for natural language processing tasks, especially language generation. LLMs can typically generate, summarize, translate, and analyze text in many contexts. They are the basis for many modern chatbots, such as ChatGPT, Claude, Gemini, Grok, and DeepSeek.",
+  "extract_html": "<p>A <b>large language model</b> (<b>LLM</b>) is an AI model trained on a vast amount of text for natural language processing tasks, especially language generation. LLMs can typically generate, summarize, translate, and analyze text in many contexts. They are the basis for many modern chatbots, such as ChatGPT, Claude, Gemini, Grok, and DeepSeek.</p>"
+ }
+}

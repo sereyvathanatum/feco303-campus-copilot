@@ -1,0 +1,58 @@
+{
+ "recorded_at": "2026-09-23T16:01:43",
+ "api": "wikipedia",
+ "url": "https://en.wikipedia.org/api/rest_v1/page/summary/Overfitting",
+ "params": {
+  "title": "Overfitting"
+ },
+ "note": "",
+ "response": {
+  "type": "standard",
+  "title": "Overfitting",
+  "displaytitle": "<span lang=\"en\" dir=\"ltr\"><span class=\"mw-page-title-main\">Overfitting</span></span>",
+  "namespace": {
+   "id": 0,
+   "text": ""
+  },
+  "wikibase_item": "Q331309",
+  "titles": {
+   "canonical": "Overfitting",
+   "normalized": "Overfitting",
+   "display": "<span lang=\"en\" dir=\"ltr\"><span class=\"mw-page-title-main\">Overfitting</span></span>"
+  },
+  "pageid": 173332,
+  "thumbnail": {
+   "source": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/19/Overfitting.svg/330px-Overfitting.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+   "width": 330,
+   "height": 330
+  },
+  "originalimage": {
+   "source": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/19/Overfitting.svg/960px-Overfitting.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+   "width": 685,
+   "height": 685
+  },
+  "lang": "en",
+  "dir": "ltr",
+  "revision": "1374396766",
+  "tid": "f0a8a94d-ae1f-11f1-bac5-6703cedf183d",
+  "timestamp": "2026-09-11T20:32:43Z",
+  "description": "Flaw in mathematical modelling",
+  "description_source": "local",
+  "content_urls": {
+   "desktop": {
+    "page": "https://en.wikipedia.org/wiki/Overfitting",
+    "revisions": "https://en.wikipedia.org/wiki/Overfitting?action=history",
+    "edit": "https://en.wikipedia.org/wiki/Overfitting?action=edit",
+    "talk": "https://en.wikipedia.org/wiki/Talk:Overfitting"
+   },
+   "mobile": {
+    "page": "https://en.wikipedia.org/wiki/Overfitting",
+    "revisions": "https://en.wikipedia.org/wiki/Special:History/Overfitting",
+    "edit": "https://en.wikipedia.org/wiki/Overfitting?action=edit",
+    "talk": "https://en.wikipedia.org/wiki/Talk:Overfitting"
+   }
+  },
+  "extract": "In mathematical modeling, overfitting is the production of an analysis that corresponds too closely or exactly to a particular set of data and may therefore fail to fit to additional data or predict future observations reliably. An overfitted model is a mathematical model that contains more parameters than can be justified by the data. In the special case of a model that consists of a polynomial function, these parameters represent the degree of a polynomial. The essence of overfitting is to unknowingly extract some of the residual variation as if that variation represents the underlying model structure.",
+  "extract_html": "<p>In mathematical modeling, <b>overfitting</b> is the production of an analysis that corresponds too closely or exactly to a particular set of data and may therefore fail to fit to additional data or predict future observations reliably. An <b>overfitted model</b> is a mathematical model that contains more parameters than can be justified by the data. In the special case of a model that consists of a polynomial function, these parameters represent the degree of a polynomial. The essence of overfitting is to unknowingly extract some of the residual variation as if that variation represents the underlying model structure.</p>"
+ }
+}

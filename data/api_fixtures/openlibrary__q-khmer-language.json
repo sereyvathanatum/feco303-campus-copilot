@@ -1,0 +1,63 @@
+{
+ "recorded_at": "2026-09-23T16:01:39",
+ "api": "openlibrary",
+ "url": "https://openlibrary.org/search.json",
+ "params": {
+  "q": "khmer language"
+ },
+ "note": "",
+ "response": {
+  "numFound": 468,
+  "start": 0,
+  "numFoundExact": true,
+  "num_found": 468,
+  "documentation_url": "https://openlibrary.org/dev/docs/api/search",
+  "q": "khmer language",
+  "offset": null,
+  "docs": [
+   {
+    "author_name": [
+     "Maly Meng"
+    ],
+    "first_publish_year": 2018,
+    "isbn": [
+     "1983616958",
+     "9781983616952"
+    ],
+    "title": "Khmer Language"
+   },
+   {
+    "author_name": [
+     "IU︠︡riĭ Aleksandrovich Gorgoniev"
+    ],
+    "first_publish_year": 1966,
+    "title": "The Khmer language [by] . Y. A. Gorgoniyev"
+   },
+   {
+    "author_name": [
+     "Derek Tonkin"
+    ],
+    "first_publish_year": 1991,
+    "isbn": [
+     "9748867021",
+     "9789748867021"
+    ],
+    "title": "The Cambodian alphabet"
+   },
+   {
+    "author_name": [
+     "I͡Uriĭ Aleksandrovich Gorgoniev"
+    ],
+    "first_publish_year": 1966,
+    "title": "The Khmer language"
+   },
+   {
+    "author_name": [
+     "Gorgoniev, I͡U. A."
+    ],
+    "first_publish_year": 1966,
+    "title": "The Khmer language"
+   }
+  ]
+ }
+}

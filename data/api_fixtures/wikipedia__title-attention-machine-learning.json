@@ -1,0 +1,58 @@
+{
+ "recorded_at": "2026-09-23T16:01:42",
+ "api": "wikipedia",
+ "url": "https://en.wikipedia.org/api/rest_v1/page/summary/Attention_(machine_learning)",
+ "params": {
+  "title": "Attention_(machine_learning)"
+ },
+ "note": "",
+ "response": {
+  "type": "standard",
+  "title": "Attention (machine learning)",
+  "displaytitle": "<span lang=\"en\" dir=\"ltr\"><span class=\"mw-page-title-main\">Attention (machine learning)</span></span>",
+  "namespace": {
+   "id": 0,
+   "text": ""
+  },
+  "wikibase_item": "Q103701642",
+  "titles": {
+   "canonical": "Attention_(machine_learning)",
+   "normalized": "Attention (machine learning)",
+   "display": "<span lang=\"en\" dir=\"ltr\"><span class=\"mw-page-title-main\">Attention (machine learning)</span></span>"
+  },
+  "pageid": 66001552,
+  "thumbnail": {
+   "source": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/62/Attention_mechanism_overview.svg/330px-Attention_mechanism_overview.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+   "width": 330,
+   "height": 246
+  },
+  "originalimage": {
+   "source": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/62/Attention_mechanism_overview.svg/330px-Attention_mechanism_overview.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+   "width": 251,
+   "height": 187
+  },
+  "lang": "en",
+  "dir": "ltr",
+  "revision": "1375561385",
+  "tid": "7a9ec6db-b374-11f1-ac83-03aaae8ae040",
+  "timestamp": "2026-09-18T15:20:28Z",
+  "description": "Machine learning technique",
+  "description_source": "local",
+  "content_urls": {
+   "desktop": {
+    "page": "https://en.wikipedia.org/wiki/Attention_(machine_learning)",
+    "revisions": "https://en.wikipedia.org/wiki/Attention_(machine_learning)?action=history",
+    "edit": "https://en.wikipedia.org/wiki/Attention_(machine_learning)?action=edit",
+    "talk": "https://en.wikipedia.org/wiki/Talk:Attention_(machine_learning)"
+   },
+   "mobile": {
+    "page": "https://en.wikipedia.org/wiki/Attention_(machine_learning)",
+    "revisions": "https://en.wikipedia.org/wiki/Special:History/Attention_(machine_learning)",
+    "edit": "https://en.wikipedia.org/wiki/Attention_(machine_learning)?action=edit",
+    "talk": "https://en.wikipedia.org/wiki/Talk:Attention_(machine_learning)"
+   }
+  },
+  "extract": "In machine learning, attention is a method that determines the importance of each component in a sequence relative to the other components in that sequence. In natural language processing, importance is represented by \"soft\" weights assigned to each word in a sentence. More generally, attention encodes vectors called token embeddings across a fixed-width sequence that can range from tens to millions of tokens in size.",
+  "extract_html": "<p>In machine learning, <b>attention</b> is a method that determines the importance of each component in a sequence relative to the other components in that sequence. In natural language processing, importance is represented by \"soft\" weights assigned to each word in a sentence. More generally, attention encodes vectors called token embeddings across a fixed-width sequence that can range from tens to millions of tokens in size.</p>"
+ }
+}

@@ -1,0 +1,84 @@
+{
+ "recorded_at": "2026-09-23T16:01:35",
+ "api": "openlibrary",
+ "url": "https://openlibrary.org/search.json",
+ "params": {
+  "q": "retrieval augmented generation"
+ },
+ "note": "",
+ "response": {
+  "numFound": 25,
+  "start": 0,
+  "numFoundExact": true,
+  "num_found": 25,
+  "documentation_url": "https://openlibrary.org/dev/docs/api/search",
+  "q": "retrieval augmented generation",
+  "offset": null,
+  "docs": [
+   {
+    "author_name": [
+     "harpreet sahota"
+    ],
+    "first_publish_year": 2024,
+    "isbn": [
+     "1394283938",
+     "9781394283934",
+     "9781394283941",
+     "139428392X",
+     "1394283946",
+     "9781394283927"
+    ],
+    "title": "Practical Retrieval Augmented Generation"
+   },
+   {
+    "author_name": [
+     "Minocha"
+    ],
+    "first_publish_year": 2025,
+    "isbn": [
+     "9781394336098",
+     "1394336098"
+    ],
+    "title": "Retrieval Augmented Generation for Natural Languag e Processing"
+   },
+   {
+    "author_name": [
+     "Abhinav Kimoth"
+    ],
+    "first_publish_year": 2025,
+    "isbn": [
+     "1633435857",
+     "9781633435858"
+    ],
+    "title": "Simple Guide to Retrieval Augmented Generation"
+   },
+   {
+    "author_name": [
+     "Saloni Garg",
+     "Amit Sagtani",
+     "Kamal Kant Hiran"
+    ],
+    "first_publish_year": 2026,
+    "isbn": [
+     "9783112226773",
+     "3112226771"
+    ],
+    "title": "RAG Artificial Intelligence"
+   },
+   {
+    "author_name": [
+     "Deepshikha Bhati",
+     "Fnu Neha",
+     "Aloysius Bathi Kasturiarachi",
+     "Angela Guercio"
+    ],
+    "first_publish_year": 2026,
+    "isbn": [
+     "3032307244",
+     "9783032307248"
+    ],
+    "title": "Journey of Large Language Models and Retrieval-Augmented Generation Systems"
+   }
+  ]
+ }
+}
