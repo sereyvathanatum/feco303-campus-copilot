@@ -53,6 +53,7 @@ DEFAULTS = {
     "GOOGLE_BASE_URL": "https://generativelanguage.googleapis.com/v1beta/openai",
     "GOOGLE_CHAT_MODEL": "gemma-4-31b-it",
     "GOOGLE_SMALL_MODEL": "gemma-4-26b-a4b-it",
+    "GOOGLE_TIMEOUT": "120",
     "COPILOT_CHAT_PROVIDER": "nim",
     "TYPESAFE_BASE_URL": "https://api.typesafe.ai/v1",
     "TYPESAFE_MODEL": "jev-latest",
@@ -235,6 +236,7 @@ class Settings:
     google_base_url: str
     google_chat_model: str
     google_small_model: str
+    google_timeout: float
     typesafe_api_key: str | None
     nvidia_base_url: str
     chat_model: str
@@ -327,6 +329,7 @@ def get_settings(profile: str | Profile | None = None, overrides: dict[str, Any]
         google_base_url=_env("GOOGLE_BASE_URL").rstrip("/"),
         google_chat_model=_env("GOOGLE_CHAT_MODEL"),
         google_small_model=_env("GOOGLE_SMALL_MODEL"),
+        google_timeout=float(_env("GOOGLE_TIMEOUT")),
         typesafe_api_key=ts if is_real_key(ts) else None,
         nvidia_base_url=_env("NVIDIA_BASE_URL"),
         chat_model=_env("NIM_CHAT_MODEL"),

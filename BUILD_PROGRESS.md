@@ -22,8 +22,8 @@ commit in this repository whose subject starts with the phase ID, so
 | P0 | scaffold, pins, config, profiles, `cli init-env`/`check`, hooks, CI | done | 15 tests pass; `cli check` prints mode matrix; hook blocked a planted word |
 | P1 | campus DB, authorizer, query templates | done | 16 DB tests: seed hash reproducible, authorizer denials, account scoping |
 | P2a | ingestion pipeline (7 stages), sources, handbook PDF | done | 19 sources, 117 chunks; offline verify hit@3 0.917, NIM verify hit@3 1.0; re-ingest 0 calls; step 1-4 checkpoints pass |
-| P2b | retrieval, stores, grounded answers, step 5 | in progress | stores + 5 retrieval modes written with P2a |
-| P3 | decisions: wire, questions, Jev client, stub, LLM router, policy | pending | |
+| P2b | retrieval, stores, grounded answers, step 5 | partly done | 3 stores, 5 modes, `retrieve --compare`, LLM client (NIM + Google, stub fallback), grounded answers, condense; embedding-contract and store-parity tests pass. Remaining: `cli ask` + step-5 checkpoint, built with the P5 graph |
+| P3 | decisions: wire, questions, Jev client, stub, LLM router, policy | in progress | |
 | P4 | tools and public APIs, fixtures | pending | |
 | P5 | graph, memory, agent, confirm, `cli step`/`demo`/`chat` | pending | |
 | P6 | MCP servers and transport switch | pending | |
@@ -36,9 +36,14 @@ commit in this repository whose subject starts with the phase ID, so
 
 ## Next action
 
-P2b: `llm/` (OpenAI-compatible client for NIM and Google AI Studio, stub, prompts), `schemas.py`,
-`rag/condense.py`, `rag/answer.py`, `cli retrieve --compare`, `cli ask`, two-node step-5 graph, store-parity and
-embedding-contract tests, step-5 checkpoint (needs demo turns 1 and 3 in `data/demo_turns.jsonl`).
+P3: `decisions/wire.py`, `questions.py` (catalogue + schema-limit tests), `jev.py` (HTTP client, retries,
+replay), `stub.py` (keyword + regex decider, `STUB` badge, passage judging by term overlap),
+`llm_router.py`, `policy.py` (pure functions, band tests), `base.py` (`Decider`, `get_decider`),
+`cli decide`, `cli jev-smoke`, `data/fixtures/jev_smoke_request.json`. Then P4 tools, then P5 graph
+(which also closes P2b: `cli ask`, step-5 checkpoint, `data/demo_turns.jsonl`).
+
+Graph design already written: `graph/state.py`, `graph/memory.py`, `graph/capabilities.py`,
+`observability/trace.py`. Nodes and `graph/build.py` come in P5.
 
 ## Build environment notes
 

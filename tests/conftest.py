@@ -35,7 +35,8 @@ def _guarded_create_connection(address, *args, **kwargs):
 
 def pytest_configure(config):
     # Keys and env files from the developer machine never reach tests.
-    for name in ("NVIDIA_API_KEY", "TYPESAFE_API_KEY", "COPILOT_PROFILE", "COPILOT_TODAY"):
+    for name in ("NVIDIA_API_KEY", "NVIDIA_NEMOTRON_API_KEY", "GEMINI_API_KEY", "HF_TOKEN", "TYPESAFE_API_KEY",
+                 "COPILOT_PROFILE", "COPILOT_TODAY", "COPILOT_CHAT_PROVIDER"):
         os.environ.pop(name, None)
     os.environ["COPILOT_ENV_FILE"] = str(ROOT / "tests" / "_no_env_file")
     os.environ["COPILOT_TODAY"] = "2026-10-06"
@@ -58,3 +59,35 @@ def runs_dir(tmp_path, monkeypatch):
     path = tmp_path / "runs"
     monkeypatch.setenv("COPILOT_RUNS_DIR", str(path))
     return path
+
+
+@pytest.fixture(scope="session")
+def pack_kb(tmp_path_factory):
+    """The pack's own sources ingested once, offline, into a session-wide runs folder."""
+    from campus_copilot import config
+    from campus_copilot.ingest import pipeline
+
+    path = tmp_path_factory.mktemp("pack") / "runs"
+    previous = os.environ.get("COPILOT_RUNS_DIR")
+    os.environ["COPILOT_RUNS_DIR"] = str(path)
+    try:
+        settings = config.get_settings("offline", {"ingest.sources": ["data/sources"]})
+        state = pipeline.run_ingest(settings, store="all", echo=lambda _: None)
+        assert state["stages"]["verify"]["stats"]["passed"]
+    finally:
+        if previous is None:
+            os.environ.pop("COPILOT_RUNS_DIR", None)
+        else:
+            os.environ["COPILOT_RUNS_DIR"] = previous
+    return path
+
+
+@pytest.fixture
+def pack_env(pack_kb, tmp_path, monkeypatch):
+    """Point the app at the session knowledge base, with a private copy so writes never leak between tests."""
+    import shutil
+
+    runs = tmp_path / "runs"
+    shutil.copytree(pack_kb, runs)
+    monkeypatch.setenv("COPILOT_RUNS_DIR", str(runs))
+    return runs

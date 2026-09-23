@@ -100,6 +100,27 @@ def cmd_ingest(args) -> int:
     return 0
 
 
+def cmd_retrieve(args) -> int:
+    settings = _settings(args)
+    if args.compare:
+        from .rag.compare import compare
+
+        modes = args.modes.split(",") if args.modes else None
+        stores = args.stores.split(",") if args.stores else None
+        print(compare(args.query, settings, modes=modes, stores=stores, k=args.k).markdown())
+        return 0
+    from .rag.retrieve import retrieve
+
+    result = retrieve(args.query, settings, mode=args.mode, store=args.store, k=args.k)
+    print(f"mode {result.mode} @ {result.store}; {result.latency_ms:.0f} ms; notes: {'; '.join(result.notes) or '-'}")
+    for c in result.chunks:
+        print(f"  {c.rank}. {c.citation} score {c.score:.4f} ({c.score_type}), {c.token_count} tokens")
+        print("     " + c.text[:160].replace("\n", " "))
+    for c in result.dropped:
+        print(f"  dropped: {c.citation} judge {c.judge}")
+    return 0
+
+
 # ----------------------------------------------------------------------- parser
 
 def build_parser() -> argparse.ArgumentParser:
@@ -134,6 +155,16 @@ def build_parser() -> argparse.ArgumentParser:
     add.add_argument("--title")
     add.add_argument("--language")
     p.set_defaults(func=cmd_ingest)
+
+    p = sub.add_parser("retrieve", help="retrieval only, with scores; --compare prints the Retrieval Lab table")
+    p.add_argument("query")
+    p.add_argument("--mode", choices=["lexical", "dense", "hybrid", "dense+rerank", "dense+judge"])
+    p.add_argument("--store", choices=["sqlite", "sqlite_vec", "chroma"])
+    p.add_argument("-k", type=int)
+    p.add_argument("--compare", action="store_true", help="every mode × available store, side by side")
+    p.add_argument("--modes", help="with --compare: comma-separated modes")
+    p.add_argument("--stores", help="with --compare: comma-separated stores")
+    p.set_defaults(func=cmd_retrieve)
 
     return parser
 
