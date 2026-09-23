@@ -8,7 +8,6 @@ version = "0.1.0"
 description = "CamTech Campus Copilot: a runnable campus chatbot that doubles as a learning pack (RAG, decision models, tools, agents, MCP, evaluation, multimodal)."
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "MIT" }
 
 [project.scripts]
 campus-copilot = "campus_copilot.cli:main"
