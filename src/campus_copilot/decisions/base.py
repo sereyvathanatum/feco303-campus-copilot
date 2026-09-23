@@ -60,6 +60,20 @@ class DeciderMixin:
     stub = False
     workers = 8
 
+    @property
+    def usage_totals(self) -> dict:
+        """Running request and token counts, so a trace span can record what its decisions cost."""
+        if "_usage" not in self.__dict__:
+            self.__dict__["_usage"] = {"calls": 0, "input_tokens": 0, "output_tokens": 0}
+        return self.__dict__["_usage"]
+
+    def count(self, decision: Decision) -> Decision:
+        totals = self.usage_totals
+        totals["calls"] += 1
+        totals["input_tokens"] += int(decision.usage.get("input_tokens", 0) or 0)
+        totals["output_tokens"] += int(decision.usage.get("output_tokens", 0) or 0)
+        return decision
+
     def decide(self, state: dict, questions: dict) -> Decision:  # pragma: no cover - implemented by subclasses
         raise NotImplementedError
 

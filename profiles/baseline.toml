@@ -125,6 +125,10 @@ output = 0.0
 input = "unknown"
 output = "unknown"
 
+[prices.google_chat]           # Google AI Studio free tier; paid-tier prices are not assumed
+input = "unknown"
+output = "unknown"
+
 [prices.nim_small]
 input = "unknown"
 output = "unknown"

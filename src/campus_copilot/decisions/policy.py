@@ -135,6 +135,10 @@ def decide_action(decision: Decision, t: Thresholds, *, guards_enabled: bool = T
     if route in RAG_ROUTES:
         # routes that lead to the same action pool their probability: a handbook/out_of_scope split still means RAG
         confidence = max(confidence, sum(float(probabilities.get(r, 0.0)) for r in RAG_ROUTES))
+    several_hint = decision.noul("several_sources", 0.0) or 0.0
+    if route in DATA_ROUTES and several_hint >= t.several_sources and agent and tools:
+        # a multi-source request splits its route across the sources it needs; together they point to the agent
+        confidence = max(confidence, sum(float(probabilities.get(r, 0.0)) for r in DATA_ROUTES))
     wants_change = (decision.noul("wants_change", 0.0) or 0.0) >= 0.5
     if route is None or confidence < t.confidence_low:
         return Action("clarify", route, f"route confidence {confidence:.2f} < {t.confidence_low:.2f}",

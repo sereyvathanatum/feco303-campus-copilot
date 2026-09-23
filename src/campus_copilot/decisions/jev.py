@@ -94,7 +94,7 @@ class JevDecider(DeciderMixin):
                             notes=["replayed"] if replayed else [])
         self.calls.append({"model": decision.model, "usage": decision.usage, "ms": round(ms, 1),
                            "answers": decision.answers})
-        return decision
+        return self.count(decision)
 
 
 def smoke_request() -> dict:

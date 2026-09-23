@@ -42,8 +42,8 @@ class LLMRouter(DeciderMixin):
             answers[qid] = {**answer, "type": spec["type"]}
         if notes:
             self.malformed += 1
-        return Decision(True, answers, self.name, f"{reply.provider}:{reply.model}", usage, ms, stub=reply.stub,
-                        notes=notes + reply.notes)
+        return self.count(Decision(True, answers, self.name, f"{reply.provider}:{reply.model}", usage, ms,
+                                   stub=reply.stub, notes=notes + reply.notes))
 
     @staticmethod
     def _valid(answer: dict, spec: dict) -> bool:

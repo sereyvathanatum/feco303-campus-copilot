@@ -111,6 +111,13 @@ def _decision(state: dict) -> Decision | None:
                                          "notes")}) if d else None
 
 
+def _usage_delta(decider, before: dict) -> dict:
+    after = dict(decider.usage_totals)
+    return {"decider": decider.name, "decider_calls": after["calls"] - before["calls"],
+            "tokens_in": after["input_tokens"] - before["input_tokens"],
+            "tokens_out": after["output_tokens"] - before["output_tokens"], "stub": decider.stub or None}
+
+
 def _format_tool_answer(result: dict) -> str:
     text = result.get("summary") or ("Done." if result.get("ok") else f"The lookup failed: {result.get('error')}")
     if result.get("attribution") and result["attribution"] not in text:
@@ -173,7 +180,7 @@ class Nodes:
                 decision = StubDecider().decide(turn_state, qcat.wire(self.rt.catalogue))
             span.set(decider=decision.decider, model=decision.model, decision=decision.answers,
                      tokens_in=decision.usage.get("input_tokens"), tokens_out=decision.usage.get("output_tokens"),
-                     stub=decision.stub or None)
+                     stub=decision.stub or None, decider_calls=1)
             route = decision.choice("route")[0]
             return {"decision": decision.as_dict(), "route": route, "notes": state.get("notes", []) + notes}
 
@@ -239,7 +246,9 @@ class Nodes:
             notes = list(result.notes)
             if use_judge and chunks and result.mode != "dense+judge":
                 with self.span(state, "judge_passages", decider=rt.decider.name) as jspan:
+                    before = dict(rt.decider.usage_totals)
                     verdicts = rt.decider.judge_passages(query, [c.text for c in chunks])
+                    jspan.set(**_usage_delta(rt.decider, before))
                     keep = []
                     for chunk, verdict in zip(chunks, verdicts):
                         chunk.judge = verdict
@@ -287,7 +296,9 @@ class Nodes:
             if not claims or not passages:
                 return {}
             joined = "\n".join(passages)
+            before = dict(rt.decider.usage_totals)
             verdicts = rt.decider.check_claims([(c, joined) for c in claims])
+            span.set(**_usage_delta(rt.decider, before))
             threshold = float(rt.profile.get("policy.claim_support", 0.80))
             supported = all(v["label"] == "supports" and v["confidence"] >= threshold for v in verdicts)
             span.set(claims=len(claims), supported=supported, verdicts=[v["label"] for v in verdicts])
@@ -386,7 +397,9 @@ class Nodes:
         with self.span(state, "risk_gate", tool=pending["tool"]) as span:
             gate_state = {"request": state["message"], "history": jev_history(_history(state)), "action": pending,
                           "session": {"account_id": state["account_id"]}}
+            before = dict(rt.decider.usage_totals)
             decision = rt.decider.decide(gate_state, qcat.wire(qcat.gate_catalogue()))
+            span.set(**_usage_delta(rt.decider, before))
             if not decision.ok:
                 decision = StubDecider().decide(gate_state, qcat.wire(qcat.gate_catalogue()))
             explicit = decision.noul("explicit", 0.0) or 0.0

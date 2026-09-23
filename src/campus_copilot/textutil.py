@@ -41,13 +41,20 @@ def khmer_grams(text: str) -> set[str]:
 
 
 def coverage(question: str, passage: str) -> float:
-    """Share of the question's content terms (or Khmer trigrams) that appear in the passage."""
-    q_terms = terms(question)
+    """Share of the question's content terms (or Khmer trigrams) that appear in the passage.
+
+    Terms are weighted by length, a cheap stand-in for specificity: a missing 'cafeteria'
+    or 'parking' weighs more than a missing 'cost'.
+    """
+    weights: dict[str, int] = {}
+    for word in _WORD.findall(question.lower()):
+        if word not in STOP and len(word) > 1:
+            weights[stem(word)] = max(weights.get(stem(word), 0), len(word))  # weight by the unstemmed word
     q_grams = khmer_grams(question)
     scores = []
-    if q_terms:
+    if weights:
         p_terms = set(terms(passage))
-        scores.append(sum(1 for t in q_terms if t in p_terms) / len(q_terms))
+        scores.append(sum(w for t, w in weights.items() if t in p_terms) / sum(weights.values()))
     if q_grams:
         p_grams = khmer_grams(passage)
         scores.append(len(q_grams & p_grams) / len(q_grams))

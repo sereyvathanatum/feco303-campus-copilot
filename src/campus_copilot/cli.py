@@ -347,6 +347,34 @@ def cmd_mcp_serve(args) -> int:
     return 0
 
 
+# ------------------------------------------------------------------ P8 commands
+
+def cmd_eval(args) -> int:
+    from .evaluation.judges import disagreement_report
+    from .evaluation.runner import run_eval
+
+    settings = _settings(args)
+    run = run_eval(settings, subset=args.subset, judges=args.judges, echo=print if args.verbose else None)
+    print(run.report())
+    if args.judges:
+        print("\nJudge disagreements (two points or more):")
+        print(disagreement_report(run.rows))
+    return 0
+
+
+def cmd_trace_report(args) -> int:
+    from .observability.report import build_report, load_spans, render
+
+    settings = _settings(args)
+    turns = load_spans(last=args.last)
+    if not turns:
+        print("No traces yet: run `cli demo` or `cli ask` first.")
+        return 1
+    report = build_report(turns, settings.profile.get("prices", {}) or {})
+    print(render(report) if not args.json else __import__("json").dumps(report, indent=2))
+    return 0
+
+
 # ------------------------------------------------------------------ P7 commands
 
 def cmd_ui(args) -> int:
@@ -440,6 +468,17 @@ def build_parser() -> argparse.ArgumentParser:
     p.set_defaults(func=cmd_step)
 
     sub.add_parser("tools", help="list tool specs").set_defaults(func=cmd_tools)
+
+    p = sub.add_parser("eval", help="run the evaluation set; summary per category and per language")
+    p.add_argument("--subset", help="category, tag, case ID, or 'routing' (the seed-routing cases); comma-separated")
+    p.add_argument("--judges", action="store_true", help="also run the LLM and decision-model faithfulness judges")
+    p.add_argument("-v", "--verbose", action="store_true")
+    p.set_defaults(func=cmd_eval)
+
+    p = sub.add_parser("trace-report", help="latency and cost summary from runs/traces/")
+    p.add_argument("--last", type=int, help="only the last N turns")
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(func=cmd_trace_report)
 
     p = sub.add_parser("ui", help="start the Gradio app on 127.0.0.1")
     p.add_argument("--share", action="store_true", help="also create a public Gradio share link (off by default)")

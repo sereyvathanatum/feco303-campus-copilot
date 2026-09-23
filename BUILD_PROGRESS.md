@@ -28,21 +28,19 @@ commit in this repository whose subject starts with the phase ID, so
 | P5 | graph, memory, agent, confirm, `cli step`/`demo`/`chat` | done | offline scoreboard 2/3/7/11/13/13 at steps 5-10 exactly as planned; 3 agent modes; confirm/cancel; checkpoints 5-9; 146 tests |
 | P6 | MCP servers and transport switch | done | 2 stdio servers from registry specs (no write tools), identity via `_meta`, resources; 12-call parity test; step-10 scoreboard identical over MCP |
 | P7 | Gradio UI | done | chat + 5 panels, Knowledge Base, Retrieval Lab, Confirm/Cancel; binds 127.0.0.1 (checked); turn driven over HTTP; `docs/ui-checklist.md`; live Jev demo 13/14 (turn 13 needs P10) |
-| P8 | observability and evaluation | in progress | |
-| P9 | guards and adversarial controls | pending | |
+| P8 | observability and evaluation | done | 77 eval cases (11 local-language, 12 seed-routing); offline eval 3 s, 56/75 pass with the keyword stub; per-category and per-language tables; trace report with 1x/10x cost, unknown prices kept unknown; 3 judges |
+| P9 | guards and adversarial controls | in progress | |
 | P10 | multimodal notice reader | pending | |
 | P11 | build-path chapters, experiment sheets, docs | pending | |
 | P12 | verify script, budgets, release notes | pending | |
 
 ## Next action
 
-P8: `observability/report.py` (`cli trace-report`: p50/p95 per node, calls per turn by provider, tokens per
-turn, cost at 1x and 10x from `[prices]`, unknown stays unknown, slowest turns), redaction test;
-`eval/cases.jsonl` (>= 66 cases per plan §12 incl. >= 10 Khmer/romanized/code-mixed, 12 `seed-routing`),
-`eval/manual_scoring.csv`, `evaluation/runner.py` (`cli eval --profile X [--subset TAG]`, confirmations
-auto-cancel, output `runs/eval/<profile>-<ts>.jsonl` + summary), `evaluation/metrics.py` (per category and
-per language), `evaluation/judges.py` (human CSV export, LLM judge, Jev claim_support, disagreement report).
-Offline `cli eval` must finish in < 2 min.
+P9: `data/sources_adversarial/` poisoned document (ingested only with `data.include_adversarial = true`),
+untrusted tool-text filter (Jev passage injection question on `concept_summary` extracts, withheld when
+flagged), severity refusal only with the guards capability, guard battery wiring review, adversarial eval
+cases passing in offline and `full` mode with the controls on; E13 profile(s) that switch controls off;
+tests: every adversarial case has an expected control; step-11 checkpoint (`tests/steps/test_step_11.py`).
 
 ## Build environment notes
 
