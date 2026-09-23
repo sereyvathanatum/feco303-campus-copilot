@@ -137,5 +137,6 @@ python scripts/verify.py                # fresh venv -> install -> tests -> demo
 - [docs/jev_primer.md](docs/jev_primer.md): the decision model's HTTP contract and answer types.
 - [docs/setup_keys.md](docs/setup_keys.md), [docs/troubleshooting.md](docs/troubleshooting.md).
 - [docs/verify-at-build.md](docs/verify-at-build.md): model, package, and API facts as found at build time.
+- [docs/budgets.md](docs/budgets.md): latency and cost targets, measured.
 - [docs/ui-checklist.md](docs/ui-checklist.md), [docs/adr_template.md](docs/adr_template.md).
 - [BUILD_PROGRESS.md](BUILD_PROGRESS.md): the build ledger.

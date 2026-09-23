@@ -33,10 +33,17 @@ def _guarded_create_connection(address, *args, **kwargs):
     return _real_create_connection(address, *args, **kwargs)
 
 
+HIDDEN = ("NVIDIA_API_KEY", "NVIDIA_NEMOTRON_API_KEY", "GEMINI_API_KEY", "HF_TOKEN", "TYPESAFE_API_KEY",
+          "COPILOT_PROFILE", "COPILOT_TODAY", "COPILOT_CHAT_PROVIDER", "COPILOT_ENV_FILE", "COPILOT_APIS_LIVE",
+          "COPILOT_TOKENIZER")
+SAVED_ENV: dict[str, str | None] = {}
+
+
 def pytest_configure(config):
-    # Keys and env files from the developer machine never reach tests.
-    for name in ("NVIDIA_API_KEY", "NVIDIA_NEMOTRON_API_KEY", "GEMINI_API_KEY", "HF_TOKEN", "TYPESAFE_API_KEY",
-                 "COPILOT_PROFILE", "COPILOT_TODAY", "COPILOT_CHAT_PROVIDER"):
+    # Keys and env files from the developer machine never reach offline tests; live tests restore them.
+    for name in HIDDEN:
+        SAVED_ENV[name] = os.environ.get(name)
+    for name in HIDDEN[:8]:
         os.environ.pop(name, None)
     os.environ["COPILOT_ENV_FILE"] = str(ROOT / "tests" / "_no_env_file")
     os.environ["COPILOT_TODAY"] = "2026-10-06"
@@ -49,6 +56,14 @@ def no_network(request, monkeypatch):
     if request.node.get_closest_marker("live"):
         if os.environ.get("COPILOT_LIVE_TESTS") != "1":
             pytest.skip("live test: set COPILOT_LIVE_TESTS=1 and real keys")
+        for name, value in SAVED_ENV.items():
+            if value is None:
+                monkeypatch.delenv(name, raising=False)
+            else:
+                monkeypatch.setenv(name, value)
+        if not SAVED_ENV.get("COPILOT_ENV_FILE"):
+            monkeypatch.setenv("COPILOT_ENV_FILE", str(ROOT / ".env"))
+        monkeypatch.setenv("COPILOT_APIS_LIVE", "true")
         return
     monkeypatch.setattr(socket.socket, "connect", _guarded_connect)
     monkeypatch.setattr(socket, "create_connection", _guarded_create_connection)

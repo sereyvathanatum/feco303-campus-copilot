@@ -15,7 +15,7 @@ THINKING_PREFIX = "<|think|>"  # Gemma 4 on NIM: thinking mode is on when the sy
 
 GROUNDED_INSTRUCTIONS = (
     "Answer the question in `question` from the passages in <sources> only. Return one JSON object with the keys "
-    '"answer" (string, two sentences at most), "citations" (list of objects with "source_id", "page", "section" '
+    '"answer" (string, five sentences at most), "citations" (list of objects with "source_id", "page", "section" '
     'copied from the source tags that support the answer), and "abstained" (true when the sources do not answer '
     "the question, with answer set to the fixed abstention sentence). Output only the JSON object."
 )
@@ -53,7 +53,7 @@ FINAL_ANSWER_TEMPLATE = (
 )
 
 SMALL_TALK_TEMPLATE = (
-    "Reply in one or two sentences to `message`. The assistant answers campus handbook, timetable, deadline, "
+    "Reply in three or five sentences to `message`. The assistant answers campus handbook, timetable, deadline, "
     "room, library, weather, currency, and course-concept questions for the demo campus."
 )
 
