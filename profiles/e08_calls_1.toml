@@ -1,0 +1,4 @@
+# E08: at most 1 tool call per turn.
+
+[agent]
+max_tool_calls = 1

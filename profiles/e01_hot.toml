@@ -1,0 +1,4 @@
+# E01: sampling temperature 0.8.
+
+[llm]
+temperature = 0.8

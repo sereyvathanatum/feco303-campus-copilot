@@ -1,0 +1,4 @@
+# E01: zero-shot prompt (no worked examples).
+
+[llm]
+prompt_style = "zero_shot"

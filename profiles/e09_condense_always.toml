@@ -1,0 +1,4 @@
+# E09: every RAG turn with history is rewritten.
+
+[rag]
+condense_query = "always"

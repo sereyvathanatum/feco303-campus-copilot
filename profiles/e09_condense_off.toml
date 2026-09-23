@@ -1,0 +1,4 @@
+# E09: follow-ups are searched literally.
+
+[rag]
+condense_query = "off"

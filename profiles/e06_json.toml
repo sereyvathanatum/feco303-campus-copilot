@@ -1,0 +1,4 @@
+# E06: model-agnostic JSON decision protocol in the agent loop.
+
+[agent]
+mode = "json"

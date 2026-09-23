@@ -1,0 +1,4 @@
+# E08: the agent loop is never used; single tool calls only.
+
+[agent]
+force = "off"

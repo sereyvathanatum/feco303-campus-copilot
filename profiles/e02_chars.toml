@@ -1,0 +1,6 @@
+# E02: chunks sized in characters instead of tokens.
+
+[rag]
+length_unit = "chars"
+chunk_size = 900
+chunk_overlap = 100

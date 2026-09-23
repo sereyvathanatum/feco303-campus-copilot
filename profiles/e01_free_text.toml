@@ -1,0 +1,4 @@
+# E01: free-text answers instead of the GroundedAnswer JSON schema.
+
+[llm]
+structured_output = false

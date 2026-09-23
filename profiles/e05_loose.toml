@@ -1,0 +1,5 @@
+# E05: loose confidence band (fewer clarify replies).
+
+[router]
+confidence_low = 0.3
+confidence_high = 0.6

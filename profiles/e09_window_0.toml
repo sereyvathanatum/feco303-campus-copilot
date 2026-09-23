@@ -1,0 +1,4 @@
+# E09: the model sees no earlier turns.
+
+[memory]
+window_turns = 0

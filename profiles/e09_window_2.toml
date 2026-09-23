@@ -1,0 +1,4 @@
+# E09: the model sees the last 2 turns.
+
+[memory]
+window_turns = 2

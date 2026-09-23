@@ -1,0 +1,4 @@
+# E12: thinking mode on (NIM Gemma 4 system-prompt token; AI Studio always thinks).
+
+[llm]
+thinking = true

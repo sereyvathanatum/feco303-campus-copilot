@@ -1,0 +1,7 @@
+# E11: one change against the baseline - lexical retrieval only.
+
+[rag]
+mode = "lexical"
+
+[jev]
+model = "jev-1.13.0"

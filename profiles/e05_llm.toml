@@ -1,0 +1,4 @@
+# E05: the chat model answers the routing questions as JSON (System 2 baseline).
+
+[router]
+kind = "llm"

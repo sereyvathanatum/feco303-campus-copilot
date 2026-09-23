@@ -20,6 +20,7 @@ from ..ingest import store as kb
 from .embeddings import HashingEmbedder
 
 MODES = ("lexical", "dense", "hybrid", "dense+rerank", "dense+judge")
+LONG_CONTEXT = "long_context"  # E15: every handbook chunk goes into the prompt, no retrieval at all
 _TERM = re.compile(r"[A-Za-z0-9]+|[ក-៿]+")
 _STOP = set(("a an the of to in on for and or is are be by with at from as it this that what which how when where "
              "who whom does do did can could should would will after before per there any some about into than "
@@ -174,6 +175,24 @@ def judge(settings, query: str, candidates: list[ScoredChunk], k: int, decider=N
     return keep[:k], dropped, f"judged by {decider.name}"
 
 
+def _long_context(query: str, settings, conn, started: float) -> RetrievalResult:
+    own = conn is None
+    conn = conn or kb.connect()
+    try:
+        source = settings.profile.get("rag.long_context_source", "campus-handbook")
+        rows = conn.execute("SELECT chunk_id, source_id, page, section, text, token_count, language FROM chunks "
+                            "WHERE source_id = ? ORDER BY page, position", (source,)).fetchall()
+        chunks = [_scored(dict(r), 1.0, "whole document in context", "none") for r in rows]
+        for rank, c in enumerate(chunks, start=1):
+            c.rank = rank
+        tokens = sum(c.token_count for c in chunks)
+        return RetrievalResult(query, LONG_CONTEXT, "none", chunks, round((time.perf_counter() - started) * 1000, 1),
+                               [f"long context: all {len(chunks)} chunks of {source} ({tokens} tokens) in the prompt"])
+    finally:
+        if own:
+            conn.close()
+
+
 def retrieve(query: str, settings, conn: sqlite3.Connection | None = None, embedder=None, mode: str | None = None,
              store: str | None = None, k: int | None = None, decider=None, session=None) -> RetrievalResult:
     from .embeddings import get_embedder
@@ -181,6 +200,8 @@ def retrieve(query: str, settings, conn: sqlite3.Connection | None = None, embed
 
     started = time.perf_counter()
     mode = mode or settings.profile.get("rag.mode", "hybrid")
+    if mode == LONG_CONTEXT:
+        return _long_context(query, settings, conn, started)
     if mode not in MODES:
         raise ValueError(f"unknown retrieval mode {mode!r}; modes: {', '.join(MODES)}")
     k = int(k or settings.profile.get("rag.top_k", 4))

@@ -1,0 +1,4 @@
+# E10: tools over the Model Context Protocol (stdio servers).
+
+[tools]
+transport = "mcp"

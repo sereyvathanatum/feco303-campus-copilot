@@ -1,0 +1,4 @@
+# E06: the decision model picks the next tool; code fills the arguments.
+
+[agent]
+mode = "jev_dispatch"

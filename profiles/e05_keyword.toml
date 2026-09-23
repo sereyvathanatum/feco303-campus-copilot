@@ -1,0 +1,4 @@
+# E05: keyword router (the rule-based stub decider).
+
+[router]
+kind = "keyword"

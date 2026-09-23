@@ -1,0 +1,4 @@
+# E02: Markdown sources only, without the PDF handbook.
+
+[data]
+include_pdf = false

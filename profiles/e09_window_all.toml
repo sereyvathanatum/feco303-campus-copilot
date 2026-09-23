@@ -1,0 +1,4 @@
+# E09: the model sees every turn (bounded by memory.max_tokens only).
+
+[memory]
+window_turns = 50

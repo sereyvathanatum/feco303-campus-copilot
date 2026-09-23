@@ -1,0 +1,4 @@
+# E08: every tool request goes through the agent loop.
+
+[agent]
+force = "on"

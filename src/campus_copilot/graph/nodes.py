@@ -34,6 +34,7 @@ from . import arguments
 from .capabilities import Capabilities
 from .memory import jev_history, model_window
 
+SQL_ROUTES = {"timetable", "deadlines", "rooms", "library", "calendar"}
 PER_TURN_RESET = {"decision": None, "route": None, "action": None, "query": {}, "tool_calls": [],
                   "pending_write": None, "pending_call": None, "sources": [], "answer": "", "result": None,
                   "flags": [], "notes": [],
@@ -85,7 +86,7 @@ class Runtime:
 
     def run_tool(self, name: str, args: dict, account_id: str, allow_write: bool = False) -> dict:
         spec = self.registry.get(name)
-        if spec is not None and spec.write:  # write tools never travel over MCP
+        if spec is not None and (spec.write or name == "run_sql"):  # writes and the SQL sandbox never travel over MCP
             return self.registry.run(name, args, self.tool_ctx(account_id), allow_write=allow_write)
         return self.transport.call(name, args, account_id)
 
@@ -263,7 +264,7 @@ class Nodes:
                           latency=result.latency_ms)
             chunks, dropped = result.chunks, []
             notes = list(result.notes)
-            if use_judge and chunks and result.mode != "dense+judge":
+            if use_judge and chunks and result.mode not in ("dense+judge", "long_context"):
                 with self.span(state, "judge_passages", decider=rt.decider.name) as jspan:
                     before = dict(rt.decider.usage_totals)
                     verdicts = rt.decider.judge_passages(query, [c.text for c in chunks])
@@ -338,6 +339,9 @@ class Nodes:
 
     def single_tool(self, state: dict) -> dict:
         rt = self.rt
+        if rt.profile.get("sql.mode", "templates") == "text_to_sql" and state.get("route") in SQL_ROUTES \
+                and (state.get("decision") or {}).get("answers", {}).get("wants_change", {}).get("noul", 0) < 0.5:
+            return self.text_to_sql(state)
         with self.span(state, "single_tool") as span:
             reading = state.get("image_reading") or {}
             image_event = {**reading["event"], "_flagged": reading.get("flagged", [])} if reading.get("event") else None
@@ -363,6 +367,22 @@ class Nodes:
             return {"answer": answer, "tool_calls": calls, "slots": slots, "notes": notes,
                     "result": TurnResult(kind="tool", answer=answer, route=state.get("route"), tool_calls=calls,
                                          sources=result.get("sources") or []).model_dump()}
+
+    def text_to_sql(self, state: dict) -> dict:
+        """E07: the chat model writes SQL; only the sandboxed read connection runs it."""
+        from ..tools.text_to_sql import generate_sql
+
+        with self.span(state, "text_to_sql") as span:
+            sql = generate_sql(self.rt.llm, state["message"])
+            result = self.rt.run_tool("run_sql", {"sql": sql}, state["account_id"])
+            span.set(sql=sql, ok=result.get("ok"), stopped_by=(result.get("data") or {}).get("stopped_by"))
+            answer = result.get("summary", "")
+            if result.get("ok"):
+                rows = result["data"]["rows"][:8]
+                answer += "\n" + "\n".join(", ".join(f"{k}={v}" for k, v in row.items()) for row in rows)
+            return {"answer": answer, "tool_calls": [result],
+                    "result": TurnResult(kind="tool", answer=answer, route=state.get("route"),
+                                         tool_calls=[result]).model_dump()}
 
     def _propose_write(self, state: dict, tool: str, args: dict) -> dict:
         if not self.rt.caps.writes:

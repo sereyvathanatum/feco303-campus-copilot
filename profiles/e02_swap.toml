@@ -1,0 +1,4 @@
+# E02: deliberate bug - passage and query input types swapped (no error is raised).
+
+[rag]
+swap_input_type = true

@@ -1,0 +1,5 @@
+# E02: large token-sized chunks.
+
+[rag]
+chunk_size = 400
+chunk_overlap = 40

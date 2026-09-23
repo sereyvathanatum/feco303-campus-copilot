@@ -1,0 +1,4 @@
+# E07: the chat model writes SQL for database questions; the sandbox runs it.
+
+[sql]
+mode = "text_to_sql"

@@ -1,0 +1,6 @@
+# E02: simulate a small local embedder that reads only 256 tokens.
+
+[rag]
+embed_max_tokens = 256
+chunk_size = 512
+chunk_overlap = 0

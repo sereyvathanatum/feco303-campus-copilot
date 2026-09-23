@@ -1,0 +1,4 @@
+# E06: provider tool calling in the agent loop.
+
+[agent]
+mode = "native"

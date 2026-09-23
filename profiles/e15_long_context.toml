@@ -1,0 +1,4 @@
+# E15: the whole handbook in the prompt instead of retrieval.
+
+[rag]
+mode = "long_context"

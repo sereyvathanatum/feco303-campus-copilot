@@ -1,0 +1,4 @@
+# E09: memory off - every turn starts a fresh thread.
+
+[memory]
+enabled = false

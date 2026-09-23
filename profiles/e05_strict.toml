@@ -1,0 +1,5 @@
+# E05: strict confidence band (more clarify replies).
+
+[router]
+confidence_low = 0.65
+confidence_high = 0.9

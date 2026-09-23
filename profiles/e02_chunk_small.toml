@@ -1,0 +1,5 @@
+# E02: small token-sized chunks. Ingest into its own runs folder (see the E02 sheet).
+
+[rag]
+chunk_size = 100
+chunk_overlap = 15
