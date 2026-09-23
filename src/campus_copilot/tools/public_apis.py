@@ -65,7 +65,8 @@ def campus_weather(ctx: ToolContext, args: WeatherArgs) -> dict:
               "hourly": "precipitation_probability,precipitation,temperature_2m",
               "timezone": campus.get("timezone", "Asia/Phnom_Penh"), "forecast_days": 7}
     try:
-        response = ctx.http.get_json("open_meteo", "https://api.open-meteo.com/v1/forecast", params, fixture_params={})
+        response = ctx.http.get_json("open_meteo", "https://api.open-meteo.com/v1/forecast", params, fixture_params={},
+                                     date_sensitive=True)
     except ApiError as exc:
         return {"ok": False, "error": str(exc), "summary": f"Weather lookup failed: {exc}."}
     hourly = response.data.get("hourly", {})

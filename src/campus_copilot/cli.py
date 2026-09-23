@@ -347,6 +347,15 @@ def cmd_mcp_serve(args) -> int:
     return 0
 
 
+# ------------------------------------------------------------------ P7 commands
+
+def cmd_ui(args) -> int:
+    from .ui.app import launch
+
+    launch(args.profile, share=args.share, port=args.port)
+    return 0
+
+
 # ----------------------------------------------------------------------- parser
 
 def build_parser() -> argparse.ArgumentParser:
@@ -431,6 +440,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.set_defaults(func=cmd_step)
 
     sub.add_parser("tools", help="list tool specs").set_defaults(func=cmd_tools)
+
+    p = sub.add_parser("ui", help="start the Gradio app on 127.0.0.1")
+    p.add_argument("--share", action="store_true", help="also create a public Gradio share link (off by default)")
+    p.add_argument("--port", type=int)
+    p.set_defaults(func=cmd_ui)
 
     p = sub.add_parser("mcp-serve", help="start an MCP server over stdio")
     p.add_argument("server", choices=["campus", "public"])

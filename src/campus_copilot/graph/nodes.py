@@ -384,7 +384,7 @@ class Nodes:
         rt = self.rt
         pending = state["pending_write"]
         with self.span(state, "risk_gate", tool=pending["tool"]) as span:
-            gate_state = {"request": state["message"], "action": pending,
+            gate_state = {"request": state["message"], "history": jev_history(_history(state)), "action": pending,
                           "session": {"account_id": state["account_id"]}}
             decision = rt.decider.decide(gate_state, qcat.wire(qcat.gate_catalogue()))
             if not decision.ok:

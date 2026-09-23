@@ -263,3 +263,12 @@ def test_policy_shape_and_capability_fallbacks():
     assert policy.decide_action(D(route=("out_of_scope", 0.9)), T).kind == "rag"
     assert policy.decide_action(D(route=("weather", 0.9), missing_info=0.95), T).kind == "clarify"
     assert policy.decide_action(D(route=("weather", 0.9), several_sources=0.1), T, force_agent="on").kind == "agent"
+
+
+def test_routes_with_the_same_action_pool_confidence():
+    split = Decision(True, {"route": {"type": "choice", "choice": "handbook", "confidence": 0.47,
+                                      "probabilities": {"handbook": 0.47, "out_of_scope": 0.45, "rooms": 0.08}}}, "t")
+    assert policy.decide_action(split, T).kind == "rag"
+    unsure = Decision(True, {"route": {"type": "choice", "choice": "rooms", "confidence": 0.4,
+                                       "probabilities": {"rooms": 0.4, "weather": 0.35, "handbook": 0.25}}}, "t")
+    assert policy.decide_action(unsure, T).kind == "clarify"

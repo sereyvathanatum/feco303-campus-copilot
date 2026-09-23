@@ -27,8 +27,8 @@ commit in this repository whose subject starts with the phase ID, so
 | P4 | tools and public APIs, fixtures | done | 15 tools (10 campus incl. 3 writes, 4 public APIs, run_sql); live fixtures recorded 23 Sep 2026 + poisoned Wikipedia variant; 29 tool tests (success, empty, error, timeout) |
 | P5 | graph, memory, agent, confirm, `cli step`/`demo`/`chat` | done | offline scoreboard 2/3/7/11/13/13 at steps 5-10 exactly as planned; 3 agent modes; confirm/cancel; checkpoints 5-9; 146 tests |
 | P6 | MCP servers and transport switch | done | 2 stdio servers from registry specs (no write tools), identity via `_meta`, resources; 12-call parity test; step-10 scoreboard identical over MCP |
-| P7 | Gradio UI | in progress | |
-| P8 | observability and evaluation | pending | |
+| P7 | Gradio UI | done | chat + 5 panels, Knowledge Base, Retrieval Lab, Confirm/Cancel; binds 127.0.0.1 (checked); turn driven over HTTP; `docs/ui-checklist.md`; live Jev demo 13/14 (turn 13 needs P10) |
+| P8 | observability and evaluation | in progress | |
 | P9 | guards and adversarial controls | pending | |
 | P10 | multimodal notice reader | pending | |
 | P11 | build-path chapters, experiment sheets, docs | pending | |
@@ -36,12 +36,13 @@ commit in this repository whose subject starts with the phase ID, so
 
 ## Next action
 
-P7: `ui/app.py` (Gradio 6): header with step + profile dropdown, chat with image upload + account picker,
-tabs Decisions (bars, STUB badge), Sources, Tools, Trace, Memory; Knowledge Base tab (upload to inbox with
-licence/origin, run ingest whole or until a stage, stage table, document view, remove, verify results);
-Retrieval Lab tab (modes x stores, overlap, "copy as evidence table"); Confirm/Cancel buttons; New thread;
-binds 127.0.0.1, `--share` opt-in; `cli ui`. Manual checklist in `docs/ui-checklist.md`.
-Live check in progress: `runs/live-check/step08_full.txt` (full mode step 8 differed from the offline plan).
+P8: `observability/report.py` (`cli trace-report`: p50/p95 per node, calls per turn by provider, tokens per
+turn, cost at 1x and 10x from `[prices]`, unknown stays unknown, slowest turns), redaction test;
+`eval/cases.jsonl` (>= 66 cases per plan §12 incl. >= 10 Khmer/romanized/code-mixed, 12 `seed-routing`),
+`eval/manual_scoring.csv`, `evaluation/runner.py` (`cli eval --profile X [--subset TAG]`, confirmations
+auto-cancel, output `runs/eval/<profile>-<ts>.jsonl` + summary), `evaluation/metrics.py` (per category and
+per language), `evaluation/judges.py` (human CSV export, LLM judge, Jev claim_support, disagreement report).
+Offline `cli eval` must finish in < 2 min.
 
 ## Build environment notes
 

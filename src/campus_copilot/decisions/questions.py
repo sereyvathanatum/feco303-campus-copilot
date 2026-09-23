@@ -156,8 +156,10 @@ def claim_catalogue() -> dict[str, Question]:
 
 def gate_catalogue() -> dict[str, Question]:
     q = [
-        Question("explicit", noul("Does `request` explicitly ask for the action described in `action`, with the "
-                                  "details it shows?"), "write explicitly requested", "risk gate"),
+        Question("explicit", noul("Read the latest message in `request` together with the earlier turns in "
+                                  "`history`. Does the account ask for the action described in `action` (the same "
+                                  "kind of action on the item the conversation refers to), rather than only asking "
+                                  "a question?"), "write explicitly requested", "risk gate"),
         Question("own_account", noul("Does the action in `action` affect only the account `session.account_id`?"),
                  "write limited to the session account", "risk gate"),
         Question("impact", score("How costly would it be if the action in `action` were done by mistake?",

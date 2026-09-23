@@ -125,9 +125,8 @@ def propose(route: str, decision: dict, message: str, history: list[dict], slots
         seats = CAPACITY.search(message)
         if seats:
             args["min_capacity"] = int(seats.group(1) or seats.group(2))
-        if wants_change and not last:
-            return Proposal(None, {}, "no room chosen yet", "Which room: search for a free room first, then book it.")
-        return Proposal("find_free_rooms", args, "free-room search")
+        # a booking request with no earlier search runs the search first; the write needs a chosen room
+        return Proposal("find_free_rooms", args, "free-room search" + (" before a booking" if wants_change else ""))
     if route == "library":
         isbn = ISBN.search(message) or next((m for m in (ISBN.search(t) for t in reversed(earlier)) if m), None)
         if wants_change:
@@ -183,8 +182,11 @@ def agent_candidates(message: str, decision: dict, history: list[dict], slots: d
     order = ["rooms", "timetable", "deadlines", "calendar", "library", "weather", "currency", "concept"]
     calls: list[dict] = []
     window = time_window(message)
+    answers = dict((decision or {}).get("answers") or {})
+    answers["wants_change"] = {"type": "noul", "noul": 0.0}  # the plan holds read lookups; writes go through the gate
+    reads_only = {**(decision or {}), "answers": answers}
     for route in [r for r in order if r in hits]:
-        proposal = propose(route, decision, message, history, slots, today)
+        proposal = propose(route, reads_only, message, history, {}, today)
         if proposal.tool and not proposal.tool.startswith(("book_", "place_", "add_")):
             if route == "weather" and window:
                 proposal.args.update({"hour": window[0], "until": window[1]})

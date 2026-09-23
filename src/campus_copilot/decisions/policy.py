@@ -23,6 +23,7 @@ from .base import Decision
 from .questions import DATA_ROUTES
 
 GUARDS = ("injection", "other_account", "misconduct")
+RAG_ROUTES = ("handbook", "out_of_scope")  # both end in retrieval, which answers or abstains
 REFUSALS = {"injection": prompts.REFUSE_INJECTION, "other_account": prompts.REFUSE_OTHER_ACCOUNT,
             "misconduct": prompts.REFUSE_MISCONDUCT}
 
@@ -130,7 +131,10 @@ def decide_action(decision: Decision, t: Thresholds, *, guards_enabled: bool = T
     if handoff:
         handoff.flags = flags
         return handoff
-    route, confidence, _ = decision.choice("route")
+    route, confidence, probabilities = decision.choice("route")
+    if route in RAG_ROUTES:
+        # routes that lead to the same action pool their probability: a handbook/out_of_scope split still means RAG
+        confidence = max(confidence, sum(float(probabilities.get(r, 0.0)) for r in RAG_ROUTES))
     wants_change = (decision.noul("wants_change", 0.0) or 0.0) >= 0.5
     if route is None or confidence < t.confidence_low:
         return Action("clarify", route, f"route confidence {confidence:.2f} < {t.confidence_low:.2f}",

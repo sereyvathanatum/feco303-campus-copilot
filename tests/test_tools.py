@@ -156,6 +156,7 @@ def test_concept_summary_is_marked_untrusted(ctx):
 @pytest.mark.parametrize("name,args", API_CALLS)
 def test_api_tools_report_timeouts_as_data(runs_dir, monkeypatch, name, args):
     monkeypatch.setattr("campus_copilot.tools.http.RETRIES", 0)
+    monkeypatch.setattr(HttpClient, "clock_pinned", property(lambda self: False))
     ctx = live_ctx(runs_dir, RecordingSession(default=requests.Timeout("slow")))
     result = run(ctx, name, args)
     assert result["ok"] is False and "timeout" in result["error"]
@@ -164,6 +165,7 @@ def test_api_tools_report_timeouts_as_data(runs_dir, monkeypatch, name, args):
 @pytest.mark.parametrize("name,args", API_CALLS)
 def test_api_tools_report_http_errors_as_data(runs_dir, monkeypatch, name, args):
     monkeypatch.setattr("campus_copilot.tools.http.RETRIES", 0)
+    monkeypatch.setattr(HttpClient, "clock_pinned", property(lambda self: False))
     ctx = live_ctx(runs_dir, RecordingSession(default=FakeResponse(500, text="boom")))
     result = run(ctx, name, args)
     assert result["ok"] is False and "HTTP 500" in result["error"]
@@ -203,3 +205,9 @@ def test_text_to_sql_sandbox_stops_bad_queries(ctx):
     assert run(ctx, "run_sql", {"sql": "DELETE FROM loans"})["ok"] is False
     many = run(ctx, "run_sql", {"sql": "SELECT a.id FROM rooms a, rooms b, rooms c"})
     assert many["ok"] and many["data"]["capped"] and len(many["data"]["rows"]) == text_to_sql.ROW_CAP
+
+
+def test_pinned_clock_replays_the_forecast_even_when_live(runs_dir):
+    ctx = live_ctx(runs_dir, RecordingSession(default=requests.Timeout("never called")))
+    result = run(ctx, "campus_weather", {"date": "tomorrow"})
+    assert result["ok"] and "campus clock pinned" in result["source"]

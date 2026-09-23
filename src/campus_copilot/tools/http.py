@@ -77,9 +77,18 @@ class HttpClient:
                 self._session = requests.Session()
         return self._session
 
-    def get_json(self, api: str, url: str, params: dict | None = None, fixture_params: dict | None = None) -> ApiResponse:
-        if not self.live:
-            return self._fixture(api, fixture_params if fixture_params is not None else params, url)
+    @property
+    def clock_pinned(self) -> bool:
+        return self.today != dt.date.today()
+
+    def get_json(self, api: str, url: str, params: dict | None = None, fixture_params: dict | None = None,
+                 date_sensitive: bool = False) -> ApiResponse:
+        if not self.live or (date_sensitive and self.clock_pinned):
+            # a live forecast covers the real week, so a pinned campus clock replays the recorded one
+            response = self._fixture(api, fixture_params if fixture_params is not None else params, url)
+            if self.live:
+                response.source += "; campus clock pinned"
+            return response
         import requests
 
         last = ""
