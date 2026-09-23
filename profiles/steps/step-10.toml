@@ -1,0 +1,8 @@
+# Build-path step 10: Connect through MCP.
+# Capabilities built so far; see docs/build-path/.
+step = 10
+title = "Connect through MCP"
+capabilities = ["kb", "rag", "memory", "decisions", "tools", "agent", "writes", "mcp"]
+
+[tools]
+transport = "mcp"

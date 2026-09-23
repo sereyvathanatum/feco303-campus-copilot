@@ -1,0 +1,181 @@
+[
+  {
+    "_id": "req-01",
+    "colId": "col-campus-copilot",
+    "containerId": "",
+    "name": "NIM chat (gemma-4-31b-it)",
+    "url": "{{nimBase}}/chat/completions",
+    "method": "POST",
+    "sortNum": 10000,
+    "created": "2026-09-23T00:00:00.000Z",
+    "modified": "2026-09-23T00:00:00.000Z",
+    "headers": [
+      {
+        "name": "Authorization",
+        "value": "Bearer {{process.env.NVIDIA_API_KEY}}"
+      },
+      {
+        "name": "Content-Type",
+        "value": "application/json"
+      }
+    ],
+    "body": {
+      "type": "json",
+      "raw": "{\n  \"model\": \"google/gemma-4-31b-it\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Reply with the word ready.\"\n    }\n  ],\n  \"max_tokens\": 16,\n  \"temperature\": 0\n}",
+      "form": []
+    }
+  },
+  {
+    "_id": "req-02",
+    "colId": "col-campus-copilot",
+    "containerId": "",
+    "name": "NIM embeddings (passage)",
+    "url": "{{nimBase}}/embeddings",
+    "method": "POST",
+    "sortNum": 20000,
+    "created": "2026-09-23T00:00:00.000Z",
+    "modified": "2026-09-23T00:00:00.000Z",
+    "headers": [
+      {
+        "name": "Authorization",
+        "value": "Bearer {{process.env.NVIDIA_API_KEY}}"
+      },
+      {
+        "name": "Content-Type",
+        "value": "application/json"
+      }
+    ],
+    "body": {
+      "type": "json",
+      "raw": "{\n  \"model\": \"nvidia/nemotron-3-embed-1b\",\n  \"input\": [\n    \"Attendance rules for lab sessions.\"\n  ],\n  \"input_type\": \"passage\",\n  \"truncate\": \"NONE\",\n  \"encoding_format\": \"float\"\n}",
+      "form": []
+    }
+  },
+  {
+    "_id": "req-03",
+    "colId": "col-campus-copilot",
+    "containerId": "",
+    "name": "NIM embeddings (query)",
+    "url": "{{nimBase}}/embeddings",
+    "method": "POST",
+    "sortNum": 30000,
+    "created": "2026-09-23T00:00:00.000Z",
+    "modified": "2026-09-23T00:00:00.000Z",
+    "headers": [
+      {
+        "name": "Authorization",
+        "value": "Bearer {{process.env.NVIDIA_API_KEY}}"
+      },
+      {
+        "name": "Content-Type",
+        "value": "application/json"
+      }
+    ],
+    "body": {
+      "type": "json",
+      "raw": "{\n  \"model\": \"nvidia/nemotron-3-embed-1b\",\n  \"input\": [\n    \"missed lab sessions penalty\"\n  ],\n  \"input_type\": \"query\",\n  \"truncate\": \"NONE\",\n  \"encoding_format\": \"float\"\n}",
+      "form": []
+    }
+  },
+  {
+    "_id": "req-04",
+    "colId": "col-campus-copilot",
+    "containerId": "",
+    "name": "NIM models list",
+    "url": "{{nimBase}}/models",
+    "method": "GET",
+    "sortNum": 40000,
+    "created": "2026-09-23T00:00:00.000Z",
+    "modified": "2026-09-23T00:00:00.000Z",
+    "headers": [
+      {
+        "name": "Authorization",
+        "value": "Bearer {{process.env.NVIDIA_API_KEY}}"
+      }
+    ]
+  },
+  {
+    "_id": "req-05",
+    "colId": "col-campus-copilot",
+    "containerId": "",
+    "name": "Jev systemone (reference call)",
+    "url": "{{typesafeBase}}/systemone",
+    "method": "POST",
+    "sortNum": 50000,
+    "created": "2026-09-23T00:00:00.000Z",
+    "modified": "2026-09-23T00:00:00.000Z",
+    "headers": [
+      {
+        "name": "Authorization",
+        "value": "Bearer {{process.env.TYPESAFE_API_KEY}}"
+      },
+      {
+        "name": "Content-Type",
+        "value": "application/json"
+      }
+    ],
+    "body": {
+      "type": "json",
+      "raw": "{\n  \"state\": \"Hi, I've been trying to connect my Stripe account for 3 days and the integration keeps failing. I'm losing sales. Please help ASAP.\",\n  \"model\": \"jev-latest\",\n  \"questions\": {\n    \"urgency\": {\n      \"type\": \"noul\",\n      \"instructions\": \"Does this message express urgency?\"\n    }\n  }\n}",
+      "form": []
+    }
+  },
+  {
+    "_id": "req-06",
+    "colId": "col-campus-copilot",
+    "containerId": "",
+    "name": "Open-Meteo forecast",
+    "url": "https://api.open-meteo.com/v1/forecast?latitude=11.5564&longitude=104.9282&hourly=precipitation_probability,precipitation,temperature_2m&timezone=Asia%2FPhnom_Penh&forecast_days=3",
+    "method": "GET",
+    "sortNum": 60000,
+    "created": "2026-09-23T00:00:00.000Z",
+    "modified": "2026-09-23T00:00:00.000Z",
+    "headers": []
+  },
+  {
+    "_id": "req-07",
+    "colId": "col-campus-copilot",
+    "containerId": "",
+    "name": "ExchangeRate-API open USD",
+    "url": "https://open.er-api.com/v6/latest/USD",
+    "method": "GET",
+    "sortNum": 70000,
+    "created": "2026-09-23T00:00:00.000Z",
+    "modified": "2026-09-23T00:00:00.000Z",
+    "headers": []
+  },
+  {
+    "_id": "req-08",
+    "colId": "col-campus-copilot",
+    "containerId": "",
+    "name": "Open Library search",
+    "url": "https://openlibrary.org/search.json?q=retrieval+augmented+generation&limit=5",
+    "method": "GET",
+    "sortNum": 80000,
+    "created": "2026-09-23T00:00:00.000Z",
+    "modified": "2026-09-23T00:00:00.000Z",
+    "headers": [
+      {
+        "name": "User-Agent",
+        "value": "FECO303-CampusCopilot/1.0 (+helpdesk@example.edu)"
+      }
+    ]
+  },
+  {
+    "_id": "req-09",
+    "colId": "col-campus-copilot",
+    "containerId": "",
+    "name": "Wikipedia summary",
+    "url": "https://en.wikipedia.org/api/rest_v1/page/summary/Attention_(machine_learning)",
+    "method": "GET",
+    "sortNum": 90000,
+    "created": "2026-09-23T00:00:00.000Z",
+    "modified": "2026-09-23T00:00:00.000Z",
+    "headers": [
+      {
+        "name": "User-Agent",
+        "value": "FECO303-CampusCopilot/1.0 (+helpdesk@example.edu)"
+      }
+    ]
+  }
+]

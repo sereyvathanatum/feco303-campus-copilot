@@ -1,0 +1,8 @@
+# Build-path step 4: Embed, store, and verify.
+# Capabilities built so far; see docs/build-path/.
+step = 4
+title = "Embed, store, and verify"
+capabilities = ["kb"]
+
+[ingest]
+until = "verify"

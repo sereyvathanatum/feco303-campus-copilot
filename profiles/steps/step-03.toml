@@ -1,0 +1,8 @@
+# Build-path step 3: Clean and chunk.
+# Capabilities built so far; see docs/build-path/.
+step = 3
+title = "Clean and chunk"
+capabilities = ["kb"]
+
+[ingest]
+until = "chunk"

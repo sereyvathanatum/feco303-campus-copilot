@@ -1,0 +1,5 @@
+# Build-path step 11: Observe, evaluate, and harden.
+# Capabilities built so far; see docs/build-path/.
+step = 11
+title = "Observe, evaluate, and harden"
+capabilities = ["kb", "rag", "memory", "decisions", "tools", "agent", "writes", "mcp", "evaluation", "guards"]

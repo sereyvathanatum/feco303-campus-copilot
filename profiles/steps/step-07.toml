@@ -1,0 +1,5 @@
+# Build-path step 7: Decide with a System One model.
+# Capabilities built so far; see docs/build-path/.
+step = 7
+title = "Decide with a System One model"
+capabilities = ["kb", "rag", "memory", "decisions"]

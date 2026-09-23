@@ -1,0 +1,24 @@
+# feco303-campus-copilot runtime requirements.
+# Core pins verified together in Sep 2026 (see docs/verify-at-build.md).
+langgraph==1.2.11
+langchain-core==1.6.3
+langchain-text-splitters==1.1.2
+pydantic==2.13.5
+python-dotenv>=1.0,<2
+langgraph-checkpoint-sqlite==3.1.1
+langchain-nvidia-ai-endpoints==1.4.3
+requests>=2.31,<3
+requests-cache==1.3.3
+mcp==1.30.0
+langchain-mcp-adapters==0.3.2
+gradio==6.28.0
+# numpy wheels depend on the Python version; the range keeps 3.10 installable.
+numpy>=1.26,<3
+pypdf==6.19.0
+sqlite-vec==0.1.9
+tokenizers==0.23.2
+tiktoken==0.14.0
+tomli>=2.0; python_version<"3.11"
+pillow>=10,<13
+pytest>=8,<9
+-e .

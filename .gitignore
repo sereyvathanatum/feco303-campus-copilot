@@ -1,0 +1,33 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Runtime state
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+runs/
+http_cache.sqlite
+
+# Inbox contents stay local; only the README is tracked
+data/inbox/*
+!data/inbox/README.md
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+build/
+dist/
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+.gradio/

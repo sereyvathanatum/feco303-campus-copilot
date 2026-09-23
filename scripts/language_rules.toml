@@ -1,0 +1,21 @@
+# scripts/language_rules.toml
+# Word lists for scripts/check_language.py (docs/implementation-plan.md §3).
+
+[audience]            # whole words, any case
+words = ["student", "students", "learner", "learners", "pupil", "pupils",
+         "instructor", "instructors", "teacher", "teachers", "lecturer", "lecturers"]
+
+[pronouns]            # whole words, case-sensitive ("US dollars" passes)
+words = ["I", "me", "my", "mine", "we", "us", "our", "ours", "you", "your", "yours",
+         "Me", "My", "We", "Our", "You", "Your"]
+
+[review_only]         # not auto-checked (false positives); kept out during review
+words = ["he", "she", "him", "her", "his", "hers"]
+
+[exempt]
+# Whole files that reproduce third-party or rule text.
+paths = ["scripts/language_rules.toml", "data/api_fixtures/", "data/images/",
+         "thunder-tests/thunderclient.json"]   # holds the verbatim Jev reference call
+# Files whose chat-input fields are exempt; other fields are still checked.
+chat_input_files = ["eval/", "data/demo_turns.jsonl", "data/fixtures/"]
+chat_input_fields = ["message", "history", "state", "variants"]

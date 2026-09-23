@@ -1,0 +1,11 @@
+# Build-path step 5: Retrieve and answer: the first chatbot.
+# Capabilities built so far; see docs/build-path/.
+step = 5
+title = "Retrieve and answer: the first chatbot"
+capabilities = ["kb", "rag"]
+
+[memory]
+enabled = false
+
+[rag]
+condense_query = "off"

@@ -1,0 +1,2 @@
+# Maintenance tools: builds the synthetic handbook PDF (scripts/make_pdfs.py).
+fpdf2==2.8.8

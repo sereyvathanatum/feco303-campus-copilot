@@ -1,0 +1,5 @@
+# Build-path step 9: Agent loop and safe writes.
+# Capabilities built so far; see docs/build-path/.
+step = 9
+title = "Agent loop and safe writes"
+capabilities = ["kb", "rag", "memory", "decisions", "tools", "agent", "writes"]

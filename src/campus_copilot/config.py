@@ -1,0 +1,320 @@
+"""Configuration: `.env` loading, placeholder detection, profiles, capabilities, run mode.
+
+Loading rules (docs/implementation-plan.md §7.1):
+
+1. `COPILOT_ENV_FILE` wins; otherwise `.env` is searched upward from the working
+   directory, then the repository root is tried.
+2. Variables already present in the process environment win over `.env` values.
+3. A small built-in parser takes over when `python-dotenv` is missing.
+4. Placeholder keys from `.env.example` count as missing.
+"""
+
+from __future__ import annotations
+
+import copy
+import datetime as dt
+import os
+import sys
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any
+
+if sys.version_info >= (3, 11):
+    import tomllib
+else:  # pragma: no cover - exercised on 3.10 only
+    import tomli as tomllib
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+PROFILES_DIR = REPO_ROOT / "profiles"
+DATA_DIR = REPO_ROOT / "data"
+RUNS_DIR = REPO_ROOT / "runs"
+
+PLACEHOLDER_KEYS = {
+    "nvapi-replace-with-a-real-key",
+    "typesafe-replace-with-a-real-key",
+}
+
+ALL_CAPABILITIES = (
+    "kb", "rag", "memory", "decisions", "tools", "agent", "writes",
+    "mcp", "evaluation", "guards", "vision",
+)
+
+DEFAULTS = {
+    "NVIDIA_BASE_URL": "https://integrate.api.nvidia.com/v1",
+    "NIM_CHAT_MODEL": "google/gemma-4-31b-it",
+    "NIM_SMALL_MODEL": "nvidia/nemotron-nano-9b-v2",
+    "NIM_EMBED_MODEL": "nvidia/nemotron-3-embed-1b",
+    "NIM_RERANK_MODEL": "nvidia/llama-nemotron-rerank-1b-v2",
+    "NIM_TEMPERATURE": "0.0",
+    "NIM_MAX_TOKENS": "512",
+    "NIM_TIMEOUT": "60",
+    "TYPESAFE_BASE_URL": "https://api.typesafe.ai/v1",
+    "TYPESAFE_MODEL": "jev-latest",
+    "TYPESAFE_TIMEOUT": "30",
+    "COPILOT_PROFILE": "baseline",
+    "COPILOT_APIS_LIVE": "true",
+    "COPILOT_HTTP_CONTACT": "helpdesk@example.edu",
+    "COPILOT_LIVE_TESTS": "0",
+}
+
+
+# --------------------------------------------------------------------------- .env
+
+def _parse_env_file(path: Path) -> dict[str, str]:
+    """Fallback parser: KEY=VALUE lines, `#` comments, optional quotes, `export ` prefix."""
+    values: dict[str, str] = {}
+    for raw in path.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        if line.startswith("export "):
+            line = line[len("export "):]
+        key, _, value = line.partition("=")
+        key, value = key.strip(), value.strip()
+        if value[:1] in {'"', "'"} and value[-1:] == value[:1]:
+            value = value[1:-1]
+        elif " #" in value:
+            value = value.split(" #", 1)[0].rstrip()
+        values[key] = value
+    return values
+
+
+def find_env_file() -> Path | None:
+    explicit = os.environ.get("COPILOT_ENV_FILE", "").strip()
+    if explicit:
+        path = Path(explicit).expanduser()
+        return path if path.is_file() else None
+    try:
+        from dotenv import find_dotenv
+
+        found = find_dotenv(usecwd=True)
+        if found:
+            return Path(found)
+    except ImportError:
+        here = Path.cwd().resolve()
+        for folder in (here, *here.parents):
+            if (folder / ".env").is_file():
+                return folder / ".env"
+    root_env = REPO_ROOT / ".env"
+    return root_env if root_env.is_file() else None
+
+
+def load_env(path: Path | None = None) -> Path | None:
+    """Load `.env` into `os.environ` without overriding existing variables."""
+    path = path or find_env_file()
+    if path is None:
+        return None
+    try:
+        from dotenv import dotenv_values
+
+        values = {k: v for k, v in dotenv_values(path).items() if v is not None}
+    except ImportError:
+        values = _parse_env_file(path)
+    for key, value in values.items():
+        os.environ.setdefault(key, value)
+    return path
+
+
+def init_env_file() -> tuple[Path, bool]:
+    """Copy `.env.example` to `.env` only when `.env` is absent. Returns (path, created)."""
+    target = REPO_ROOT / ".env"
+    if target.exists():
+        return target, False
+    target.write_text((REPO_ROOT / ".env.example").read_text(encoding="utf-8"), encoding="utf-8")
+    return target, True
+
+
+def is_real_key(value: str | None) -> bool:
+    return bool(value and value.strip() and value.strip() not in PLACEHOLDER_KEYS)
+
+
+# ----------------------------------------------------------------------- profiles
+
+def _deep_merge(base: dict, override: dict) -> dict:
+    merged = copy.deepcopy(base)
+    for key, value in override.items():
+        if isinstance(value, dict) and isinstance(merged.get(key), dict):
+            merged[key] = _deep_merge(merged[key], value)
+        else:
+            merged[key] = copy.deepcopy(value)
+    return merged
+
+
+def profile_path(name: str) -> Path:
+    name = name.removesuffix(".toml")
+    path = PROFILES_DIR / f"{name}.toml"
+    if not path.is_file():
+        raise FileNotFoundError(f"profile not found: {path}")
+    return path
+
+
+def load_profile_dict(name: str, _seen: tuple[str, ...] = ()) -> dict:
+    """Read a profile and merge it over its parent (`extends`, default `baseline`)."""
+    if name in _seen:
+        raise ValueError(f"profile inheritance loop: {' -> '.join((*_seen, name))}")
+    with profile_path(name).open("rb") as handle:
+        data = tomllib.load(handle)
+    parent = data.pop("extends", None if name == "baseline" else "baseline")
+    if parent:
+        data = _deep_merge(load_profile_dict(parent, (*_seen, name)), data)
+    return data
+
+
+@dataclass
+class Profile:
+    name: str
+    data: dict
+
+    def get(self, dotted: str, default: Any = None) -> Any:
+        node: Any = self.data
+        for part in dotted.split("."):
+            if not isinstance(node, dict) or part not in node:
+                return default
+            node = node[part]
+        return node
+
+    def set(self, dotted: str, value: Any) -> None:
+        parts = dotted.split(".")
+        node = self.data
+        for part in parts[:-1]:
+            node = node.setdefault(part, {})
+        node[parts[-1]] = value
+
+    @property
+    def capabilities(self) -> tuple[str, ...]:
+        caps = self.data.get("capabilities", list(ALL_CAPABILITIES))
+        unknown = set(caps) - set(ALL_CAPABILITIES)
+        if unknown:
+            raise ValueError(f"unknown capabilities in profile {self.name}: {sorted(unknown)}")
+        return tuple(caps)
+
+    def has(self, capability: str) -> bool:
+        return capability in self.capabilities
+
+    @property
+    def step(self) -> int | None:
+        return self.data.get("step")
+
+
+def load_profile(name: str | None = None, overrides: dict[str, Any] | None = None) -> Profile:
+    name = name or os.environ.get("COPILOT_PROFILE") or DEFAULTS["COPILOT_PROFILE"]
+    profile = Profile(name=name, data=load_profile_dict(name))
+    for key, value in (overrides or {}).items():
+        profile.set(key, value)
+    return profile
+
+
+def list_profiles() -> list[str]:
+    return sorted(
+        str(p.relative_to(PROFILES_DIR).with_suffix("")).replace("\\", "/")
+        for p in PROFILES_DIR.rglob("*.toml")
+    )
+
+
+def step_profile_name(step: int) -> str:
+    if not 1 <= step <= 12:
+        raise ValueError("build-path steps run from 1 to 12")
+    return f"steps/step-{step:02d}"
+
+
+# ----------------------------------------------------------------------- settings
+
+@dataclass
+class Settings:
+    env_file: Path | None
+    nvidia_api_key: str | None
+    typesafe_api_key: str | None
+    nvidia_base_url: str
+    chat_model: str
+    small_model: str
+    embed_model: str
+    rerank_model: str
+    temperature: float
+    max_tokens: int
+    nim_timeout: float
+    typesafe_base_url: str
+    typesafe_model: str
+    typesafe_timeout: float
+    apis_live: bool
+    http_contact: str
+    live_tests: bool
+    profile: Profile
+    notes: list[str] = field(default_factory=list)
+
+    @property
+    def has_nim(self) -> bool:
+        return is_real_key(self.nvidia_api_key) and not self.profile.get("app.force_offline", False)
+
+    @property
+    def has_jev(self) -> bool:
+        return is_real_key(self.typesafe_api_key) and not self.profile.get("app.force_offline", False)
+
+    @property
+    def run_mode(self) -> str:
+        if not self.has_nim:
+            return "offline"
+        return "full" if self.has_jev else "nim"
+
+    @property
+    def jev_model(self) -> str:
+        return self.profile.get("jev.model") or self.typesafe_model
+
+    @property
+    def use_live_apis(self) -> bool:
+        return bool(self.profile.get("apis.live", True)) and self.apis_live and self.run_mode != "offline"
+
+
+def _env(name: str) -> str:
+    return os.environ.get(name, DEFAULTS.get(name, ""))
+
+
+def _truthy(value: str) -> bool:
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def get_settings(profile: str | Profile | None = None, overrides: dict[str, Any] | None = None) -> Settings:
+    env_file = load_env()
+    prof = profile if isinstance(profile, Profile) else load_profile(profile, overrides)
+    notes: list[str] = []
+    nv, ts = os.environ.get("NVIDIA_API_KEY"), os.environ.get("TYPESAFE_API_KEY")
+    if nv and not is_real_key(nv):
+        notes.append("NVIDIA_API_KEY holds the placeholder value; NIM counts as missing.")
+    if ts and not is_real_key(ts):
+        notes.append("TYPESAFE_API_KEY holds the placeholder value; Jev counts as missing.")
+    return Settings(
+        env_file=env_file,
+        nvidia_api_key=nv if is_real_key(nv) else None,
+        typesafe_api_key=ts if is_real_key(ts) else None,
+        nvidia_base_url=_env("NVIDIA_BASE_URL"),
+        chat_model=_env("NIM_CHAT_MODEL"),
+        small_model=_env("NIM_SMALL_MODEL"),
+        embed_model=_env("NIM_EMBED_MODEL"),
+        rerank_model=_env("NIM_RERANK_MODEL"),
+        temperature=float(prof.get("llm.temperature", float(_env("NIM_TEMPERATURE")))),
+        max_tokens=int(_env("NIM_MAX_TOKENS")),
+        nim_timeout=float(_env("NIM_TIMEOUT")),
+        typesafe_base_url=_env("TYPESAFE_BASE_URL").rstrip("/"),
+        typesafe_model=_env("TYPESAFE_MODEL"),
+        typesafe_timeout=float(_env("TYPESAFE_TIMEOUT")),
+        apis_live=_truthy(_env("COPILOT_APIS_LIVE")),
+        http_contact=_env("COPILOT_HTTP_CONTACT"),
+        live_tests=_truthy(_env("COPILOT_LIVE_TESTS")),
+        profile=prof,
+        notes=notes,
+    )
+
+
+# -------------------------------------------------------------------------- clock
+
+def today(profile: Profile | None = None) -> dt.date:
+    """The campus date. Profiles pin it (`app.today`) so demos and tests stay repeatable."""
+    pinned = os.environ.get("COPILOT_TODAY") or (profile.get("app.today") if profile else None)
+    if pinned:
+        return dt.date.fromisoformat(str(pinned))
+    return dt.date.today()
+
+
+def runs_dir() -> Path:
+    path = Path(os.environ.get("COPILOT_RUNS_DIR") or RUNS_DIR)
+    path.mkdir(parents=True, exist_ok=True)
+    return path

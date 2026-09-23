@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "campus-copilot"
+version = "0.1.0"
+description = "CamTech Campus Copilot: a runnable campus chatbot that doubles as a learning pack (RAG, decision models, tools, agents, MCP, evaluation, multimodal)."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+
+[project.scripts]
+campus-copilot = "campus_copilot.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+campus_copilot = ["db/schema.sql"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+markers = [
+    "live: calls real external services (needs keys and COPILOT_LIVE_TESTS=1)",
+    "step01", "step02", "step03", "step04", "step05", "step06",
+    "step07", "step08", "step09", "step10", "step11", "step12",
+]
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"

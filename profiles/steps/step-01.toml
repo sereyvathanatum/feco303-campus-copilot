@@ -1,0 +1,8 @@
+# Build-path step 1: Gather sources.
+# Capabilities built so far; see docs/build-path/.
+step = 1
+title = "Gather sources"
+capabilities = ["kb"]
+
+[ingest]
+until = "gather"

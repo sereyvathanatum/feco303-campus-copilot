@@ -1,0 +1,7 @@
+# Optional extras. Core code never imports these packages.
+chromadb
+langchain-chroma
+typesafe-sdk==0.7.1
+langchain-typesafe==0.0.1a3
+ragas
+langsmith

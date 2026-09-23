@@ -1,0 +1,15 @@
+# Local hooks; `pre-commit install` enables them, or `python scripts/install_hooks.py`
+# writes an equivalent plain git hook without the pre-commit package.
+repos:
+  - repo: local
+    hooks:
+      - id: secret-scan
+        name: secret scan
+        entry: python scripts/check_secrets.py
+        language: system
+        pass_filenames: false
+      - id: language-check
+        name: neutral-language check
+        entry: python scripts/check_language.py
+        language: system
+        pass_filenames: false

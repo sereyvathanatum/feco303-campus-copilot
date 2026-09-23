@@ -1,0 +1,6 @@
+# Offline profile: stub models, stub decider, and recorded fixtures, even when keys exist.
+[app]
+force_offline = true
+
+[apis]
+live = false

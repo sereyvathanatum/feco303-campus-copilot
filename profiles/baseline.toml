@@ -1,0 +1,134 @@
+# Baseline profile: every capability on (equal to build-path step 12).
+# Other profiles inherit from this file and change only a few keys.
+# Keys and their users: docs/implementation-plan.md §8.1.
+
+capabilities = ["kb", "rag", "memory", "decisions", "tools", "agent", "writes",
+                "mcp", "evaluation", "guards", "vision"]
+
+[app]
+today = ""               # empty = real date; ISO date pins the campus clock
+force_offline = false    # true = stubs and fixtures even when keys exist
+account_id = "A0001"     # demo account signed in by default
+
+[demo]
+today = "2026-10-06"     # campus clock for `cli demo`, `cli eval`, and tests (a Tuesday)
+
+[campus]
+name = "CamTech (demo campus)"
+latitude = 11.5564
+longitude = 104.9282
+timezone = "Asia/Phnom_Penh"
+
+[campus.offices.fees]
+name = "Fees Office"
+contact = "fees@camtech.example.edu, ext. 214"
+hours = "Mon-Fri 08:00-11:30 and 13:30-16:30"
+
+[campus.offices.registrar]
+name = "Registrar"
+contact = "registrar@camtech.example.edu, ext. 201"
+hours = "Mon-Fri 08:00-16:30"
+
+[campus.offices.it]
+name = "IT Helpdesk"
+contact = "it@camtech.example.edu, ext. 250"
+hours = "Mon-Sat 07:30-17:30"
+
+[llm]
+prompt_style = "few_shot"      # zero_shot | few_shot            (E01)
+structured_output = true       #                                  (E01)
+temperature = 0.0              #                                  (E01)
+thinking = false               #                                  (E12)
+model_routing = "off"          # off | jev_complexity             (E12)
+
+[rag]
+chunk_size = 220               # tokens (or characters when length_unit = chars)
+chunk_overlap = 30
+top_k = 4
+length_unit = "tokens"         # tokens | chars                   (E02)
+tokenizer = "auto"             # auto | hf | tiktoken | builtin
+embed_max_tokens = 32768       # E02 sets 256 to mimic a small-window embedder
+swap_input_type = false        # deliberate bug for E02
+mode = "hybrid"                # lexical | dense | hybrid | dense+rerank | dense+judge (E03)
+store = "sqlite"               # sqlite | sqlite_vec | chroma      (E03)
+condense_query = "jev_gated"   # jev_gated | always | off         (E09)
+passage_filter = true          # Jev passage questions (active with the guards capability)
+answer_check = true            # Jev claim_support check (active with the guards capability)
+
+[data]
+include_pdf = true
+include_adversarial = false    # E13
+
+[ingest]
+sources = ["data/sources", "data/inbox"]
+until = "verify"               # gather | extract | clean | chunk | embed | store | verify
+markdown_split = "headers+tokens"   # headers+tokens | tokens
+embed_batch_size = 16
+requests_per_minute = 35       # client-side limiter, under the NIM free-tier rate
+
+[ingest.clean]
+strip_headers = true
+
+[router]
+kind = "jev"                   # keyword | llm | jev              (E05)
+confidence_low = 0.50
+confidence_high = 0.80
+
+[policy]
+block = 0.70
+review = 0.35
+severity_refuse = 2.0
+wants_staff = 0.60
+several_sources = 0.60
+follow_up = 0.50
+stated = 0.50
+missing_info = 0.80
+passage_injection = 0.70
+passage_relevant = 0.45
+passage_has_answer = 0.55
+claim_support = 0.80
+
+[agent]
+mode = "json"                  # native | json | jev_dispatch     (E06, E08)
+max_tool_calls = 4
+force = ""                     # "" | "on" | "off"                (E08)
+
+[sql]
+mode = "templates"             # templates | text_to_sql          (E07)
+
+[memory]
+enabled = true
+window_turns = 6
+max_tokens = 2000
+
+[tools]
+transport = "inprocess"        # inprocess | mcp                  (E10)
+
+[guards]
+enabled = true
+review = 0.35
+block = 0.70
+
+[apis]
+live = true                    # false = replay recorded fixtures
+
+[jev]
+model = ""                     # "" = TYPESAFE_MODEL; evaluation profiles pin jev-1.13.0
+passage_workers = 8
+
+# Prices in USD per million tokens. "unknown" stays unknown in reports.
+[prices.jev]
+input = 0.042
+output = 0.0
+
+[prices.nim_chat]
+input = "unknown"
+output = "unknown"
+
+[prices.nim_small]
+input = "unknown"
+output = "unknown"
+
+[prices.nim_embed]
+input = "unknown"
+output = "unknown"

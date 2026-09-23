@@ -1,0 +1,5 @@
+# Build-path step 12: Images and the architecture decision.
+# Capabilities built so far; see docs/build-path/.
+step = 12
+title = "Images and the architecture decision"
+capabilities = ["kb", "rag", "memory", "decisions", "tools", "agent", "writes", "mcp", "evaluation", "guards", "vision"]
