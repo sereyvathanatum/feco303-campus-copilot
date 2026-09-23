@@ -26,8 +26,8 @@ commit in this repository whose subject starts with the phase ID, so
 | P3 | decisions: wire, questions, Jev client, stub, LLM router, policy | done | live `jev-smoke` 0.98 in 530 ms; 16 live turn decisions recorded in `data/fixtures/jev/` and replayed in tests; 26 decision tests |
 | P4 | tools and public APIs, fixtures | done | 15 tools (10 campus incl. 3 writes, 4 public APIs, run_sql); live fixtures recorded 23 Sep 2026 + poisoned Wikipedia variant; 29 tool tests (success, empty, error, timeout) |
 | P5 | graph, memory, agent, confirm, `cli step`/`demo`/`chat` | done | offline scoreboard 2/3/7/11/13/13 at steps 5-10 exactly as planned; 3 agent modes; confirm/cancel; checkpoints 5-9; 146 tests |
-| P6 | MCP servers and transport switch | in progress | |
-| P7 | Gradio UI | pending | |
+| P6 | MCP servers and transport switch | done | 2 stdio servers from registry specs (no write tools), identity via `_meta`, resources; 12-call parity test; step-10 scoreboard identical over MCP |
+| P7 | Gradio UI | in progress | |
 | P8 | observability and evaluation | pending | |
 | P9 | guards and adversarial controls | pending | |
 | P10 | multimodal notice reader | pending | |
@@ -36,11 +36,12 @@ commit in this repository whose subject starts with the phase ID, so
 
 ## Next action
 
-P6: `mcp/campus_server.py` (FastMCP; read tools + handbook resources; no write tools), `mcp/public_server.py`
-(4 API tools), `mcp/client.py` (`MCPTransport`: stdio servers, `langchain-mcp-adapters` or the SDK client,
-sync wrapper), `cli mcp-serve campus|public`, parity tests (same tool results in-process vs MCP),
-`tests/steps/test_step_10.py` (scoreboard identical in-process and over MCP), docs note on MCP Inspector.
-Live check still owed: `cli ask` for demo turns 1 and 3 in `full` mode (Google chat is slow, about 40 s/call).
+P7: `ui/app.py` (Gradio 6): header with step + profile dropdown, chat with image upload + account picker,
+tabs Decisions (bars, STUB badge), Sources, Tools, Trace, Memory; Knowledge Base tab (upload to inbox with
+licence/origin, run ingest whole or until a stage, stage table, document view, remove, verify results);
+Retrieval Lab tab (modes x stores, overlap, "copy as evidence table"); Confirm/Cancel buttons; New thread;
+binds 127.0.0.1, `--share` opt-in; `cli ui`. Manual checklist in `docs/ui-checklist.md`.
+Live check in progress: `runs/live-check/step08_full.txt` (full mode step 8 differed from the offline plan).
 
 ## Build environment notes
 

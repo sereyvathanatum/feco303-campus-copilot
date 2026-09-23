@@ -335,6 +335,18 @@ def cmd_tools(args) -> int:
     return 0
 
 
+# ------------------------------------------------------------------ P6 commands
+
+def cmd_mcp_serve(args) -> int:
+    """Run one MCP server over stdio (for MCP Inspector: `mcp dev` or `npx @modelcontextprotocol/inspector`)."""
+    from .mcp import campus_server, public_server
+    from .mcp.common import serve
+
+    print(f"campus-copilot {args.server} MCP server on stdio", file=sys.stderr)
+    serve((campus_server if args.server == "campus" else public_server).server())
+    return 0
+
+
 # ----------------------------------------------------------------------- parser
 
 def build_parser() -> argparse.ArgumentParser:
@@ -419,6 +431,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.set_defaults(func=cmd_step)
 
     sub.add_parser("tools", help="list tool specs").set_defaults(func=cmd_tools)
+
+    p = sub.add_parser("mcp-serve", help="start an MCP server over stdio")
+    p.add_argument("server", choices=["campus", "public"])
+    p.set_defaults(func=cmd_mcp_serve)
 
     return parser
 
