@@ -369,7 +369,6 @@ feco303-campus-copilot/
 ├── Makefile                     bash/WSL shortcuts: env, install, seed, ingest, test, demo, ui, check, step
 ├── requirements.txt             pinned; ends with "-e ." so the package installs in place
 ├── requirements-optional.txt    laya (the decision model), chromadb + langchain-chroma, ragas, langsmith
-├── requirements-maint.txt       fpdf2 (builds the synthetic PDF)
 ├── pyproject.toml               package metadata, pytest config (markers step01…step12, live), ruff config
 ├── .env.example                 NVIDIA_API_KEY, LAYA_MODE and the other LAYA_* settings, model IDs, app settings (§7.1)
 ├── .gitignore                   .env, *.db, runs/, data/inbox/* (except README.md), .venv/, caches

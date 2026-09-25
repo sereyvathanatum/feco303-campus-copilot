@@ -201,6 +201,8 @@ def test_record_then_replay_is_deterministic(monkeypatch, tmp_path):
     assert first.answers == replayed.answers and "replayed" in replayed.notes
 
 
+@pytest.mark.skipif(not any(laya_mod.REPLAY_DIR.glob("*.json")),
+                    reason="no recorded Laya responses yet: run scripts/record_fixtures.py --laya-only")
 def test_recorded_laya_responses_replay_for_demo_turns(monkeypatch, courses):
     """Responses recorded from the local Laya model (data/fixtures/laya/) still match today's questions."""
     catalogue, enrolled = courses
@@ -210,7 +212,6 @@ def test_recorded_laya_responses_replay_for_demo_turns(monkeypatch, courses):
     decision = decider.decide(qcat.turn_state("Convert 50", [], "A0001", enrolled), spec)
     assert decision.ok, "re-record with scripts/record_fixtures.py --laya-only after changing question wording"
     assert decision.model.startswith("laya/") and set(decision.answers) == set(spec)
-    REPLAY_EXPECTATIONS  # noqa: B018 - filled in from the recorded run
 
 
 def test_get_decider_falls_back_to_stub_when_laya_is_unavailable(monkeypatch):
