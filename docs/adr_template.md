@@ -19,7 +19,7 @@ Each option is measured on the same cases (E15 builds the same feature four ways
 | Long-context prompt (whole document in context) | | | | | |
 | Retrieval (RAG) | | | | | |
 | Tool or database lookup | | | | | |
-| Fine-tuning (conceptual: PEFT / LoRA) | not measured | | | | behaviour, not knowledge |
+| Fine-tuning (conceptual only) | not measured | | | | behaviour, not knowledge |
 
 Evidence: `runs/eval/<profile>-<timestamp>.jsonl`, `cli trace-report`, and the E15 worksheet.
 

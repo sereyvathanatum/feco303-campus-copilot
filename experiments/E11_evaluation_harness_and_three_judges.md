@@ -17,7 +17,7 @@ Measure one change against the baseline and compare three faithfulness judges.
 4. Read the disagreement report at the end of the run.
 
 ## Evidence
-| Category | Baseline passed | After change | Human | LLM judge | Jev judge |
+| Category | Baseline passed | After change | Human | LLM judge | Laya judge |
 |---|---|---|---|---|---|
 
 ## Questions

@@ -1,7 +1,7 @@
 """Regenerate experiments/_reference/E01..E15.md from the code (maintenance).
 
     python scripts/make_references.py                   # offline: stub models, stub decider, fixtures
-    python scripts/make_references.py --live-decisions  # also E04, E05, E13 with the live Jev decider
+    python scripts/make_references.py --live-decisions  # also E04, E05, E13 with the local Laya decider
 
 Each file records the date, the run mode, and the models, so a reference result can be compared with a
 new run. Work happens in temporary runs folders; local state is not touched.
@@ -122,7 +122,7 @@ def main() -> int:
 
     fresh("e03")
     tables = [compare(q, settings("baseline"), k=3).markdown() for q in
-              ("What is the penalty for late assignments?", "What is the cafeteria menu on Friday?",
+              ("What is the yearly tuition fee for Cyber Security?", "What is the cafeteria menu on Friday?",
                "តើអាចខ្ចីសៀវភៅបានប៉ុន្មានក្បាល?")]
     (OUT / "E03.md").write_text(header("E03", "retrieval pipelines, vector stores, and abstention", mode) +
                                 "\n\n".join(tables) + "\n", encoding="utf-8")
@@ -140,7 +140,7 @@ def main() -> int:
         encoding="utf-8").splitlines())][:12]
     deciders = [("keyword stub", get_decider(settings("baseline"), kind="keyword"))]
     if live:
-        deciders.append(("Jev (live)", get_decider(live_settings("e05_jev"), kind="jev")))
+        deciders.append(("Laya (live)", get_decider(live_settings("e05_laya"), kind="laya")))
     rows = ["| Decider | Message | route (confidence) | currency_direction | amount_stated | follow_up | missing_info |",
             "|---|---|---|---|---|---|---|"]
     for name, decider in deciders:
@@ -153,15 +153,15 @@ def main() -> int:
             rows.append(f"| {name} | {message} | {route} ({conf:.2f}) | {d.choice('currency_direction')[0]} | "
                         f"{d.noul('amount_stated'):.2f} | {d.noul('follow_up'):.2f} | {d.noul('missing_info'):.2f} |")
     (OUT / "E04.md").write_text(header("E04", "decision-model basics",
-                                       mode + (" plus the live Jev decider" if live else "")) + "\n".join(rows) + "\n",
+                                       mode + (" plus the Laya decider" if live else "")) + "\n".join(rows) + "\n",
                                 encoding="utf-8")
     fresh("e05")
     rows = [checks_row("e05_keyword (routing subset)", eval_summary("e05_keyword", "routing"))]
     rows.append(checks_row("e05_keyword (full set)", eval_summary("e05_keyword", None)))
     if live:
-        rows.append(checks_row("e05_jev live (routing subset)", eval_summary("e05_jev", "routing", stub_chat_factory)))
-        rows.append(checks_row("e05_jev live (full set)", eval_summary("e05_jev", None, stub_chat_factory)))
-    (OUT / "E05.md").write_text(header("E05", "three ways to route", mode + (" plus live Jev rows (stub chat model)"
+        rows.append(checks_row("e05_laya live (routing subset)", eval_summary("e05_laya", "routing", stub_chat_factory)))
+        rows.append(checks_row("e05_laya live (full set)", eval_summary("e05_laya", None, stub_chat_factory)))
+    (OUT / "E05.md").write_text(header("E05", "three ways to route", mode + (" plus Laya rows (stub chat model)"
                                                                             if live else "")) + CHECKS_HEAD + "\n" +
                                 "\n".join(rows) + "\n\nThe LLM router needs a live chat model; offline it falls back to "
                                 "the stub and matches the keyword row.\n", encoding="utf-8")
@@ -173,7 +173,7 @@ def main() -> int:
         (OUT / f"{eid}.md").write_text(header(eid, title, mode) + CHECKS_HEAD + "\n" + "\n".join(rows) + "\n" + note,
                                        encoding="utf-8")
 
-    comparison("E06", "tool calling three ways", ["e06_native", "e06_json", "e06_jev_dispatch"],
+    comparison("E06", "tool calling three ways", ["e06_native", "e06_json", "e06_laya_dispatch"],
                "multi_step,rooms,library", "\nOffline, the stub model drives all three modes with the same plan; "
                "live models differ in tool choice and argument errors.\n")
     comparison("E08", "agent loop, and when not to use one", ["e08_calls_1", "baseline", "e08_calls_8",
@@ -244,7 +244,7 @@ def main() -> int:
     extra = ""
     if live:
         live_on = eval_summary("baseline", "adversarial", stub_chat_factory)
-        extra = f"\n\nWith the live Jev decider: {live_on.summary['passed']}/{live_on.summary['scored']} adversarial cases caught.\n"
+        extra = f"\n\nWith the Laya decider: {live_on.summary['passed']}/{live_on.summary['scored']} adversarial cases caught.\n"
     (OUT / "E13.md").write_text(header("E13", "prompt injection and tool-layer safety", mode) + "\n".join(rows) + extra +
                                 "\n", encoding="utf-8")
 
@@ -257,8 +257,7 @@ def main() -> int:
     (OUT / "E14.md").write_text(header("E14", "reading a notice with a vision model", mode) +
                                 vision_render(run_vision_eval(Runtime(settings("baseline")))) +
                                 "\n\nLive check on 23 Sep 2026 (docs/verify-at-build.md): Gemma 4 through Google AI Studio "
-                                "read the clean and the Khmer-script posters correctly, and Jev supported every field "
-                                "(0.97-0.99).\n", encoding="utf-8")
+                                "read the clean and the Khmer-script posters correctly.\n", encoding="utf-8")
     shutil.rmtree(base, ignore_errors=True)
     for path in sorted(OUT.glob("E*.md")):
         print(f"wrote {path.relative_to(ROOT)}")

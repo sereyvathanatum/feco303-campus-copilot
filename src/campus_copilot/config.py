@@ -31,7 +31,7 @@ RUNS_DIR = REPO_ROOT / "runs"
 
 PLACEHOLDER_KEYS = {
     "nvapi-replace-with-a-real-key",
-    "typesafe-replace-with-a-real-key",
+    "laya-replace-with-a-real-key",
     "gemini-replace-with-a-real-key",
     "hf-replace-with-a-real-token",
 }
@@ -55,9 +55,11 @@ DEFAULTS = {
     "GOOGLE_SMALL_MODEL": "gemma-4-26b-a4b-it",
     "GOOGLE_TIMEOUT": "120",
     "COPILOT_CHAT_PROVIDER": "nim",
-    "TYPESAFE_BASE_URL": "https://api.typesafe.ai/v1",
-    "TYPESAFE_MODEL": "jev-latest",
-    "TYPESAFE_TIMEOUT": "30",
+    "LAYA_MODE": "local",
+    "LAYA_MODEL": "auto",
+    "LAYA_DEVICE": "",
+    "LAYA_BASE_URL": "http://127.0.0.1:8000/v1",
+    "LAYA_TIMEOUT": "30",
     "COPILOT_PROFILE": "baseline",
     "COPILOT_APIS_LIVE": "true",
     "COPILOT_HTTP_CONTACT": "helpdesk@example.edu",
@@ -237,7 +239,7 @@ class Settings:
     google_chat_model: str
     google_small_model: str
     google_timeout: float
-    typesafe_api_key: str | None
+    laya_api_key: str | None
     nvidia_base_url: str
     chat_model: str
     small_model: str
@@ -246,9 +248,11 @@ class Settings:
     temperature: float
     max_tokens: int
     nim_timeout: float
-    typesafe_base_url: str
-    typesafe_model: str
-    typesafe_timeout: float
+    laya_mode: str
+    laya_model: str
+    laya_device: str
+    laya_base_url: str
+    laya_timeout: float
     apis_live: bool
     http_contact: str
     live_tests: bool
@@ -277,19 +281,27 @@ class Settings:
         return sorted(available, key=lambda p: p != self.chat_provider)
 
     @property
-    def has_jev(self) -> bool:
-        return is_real_key(self.typesafe_api_key) and not self.profile.get("app.force_offline", False)
+    def has_laya(self) -> bool:
+        """Laya is usable: `LAYA_MODE=local` with the `laya` package installed, or `LAYA_MODE=http`."""
+        if self.offline_forced or self.laya_mode == "off":
+            return False
+        if self.laya_mode == "http":
+            return True
+        import importlib.util
+
+        return importlib.util.find_spec("laya") is not None
 
     @property
     def run_mode(self) -> str:
         # "nim" mode means live models (NIM, or Google AI Studio for chat) with the stub decider.
         if not self.has_live_llm:
             return "offline"
-        return "full" if self.has_jev else "nim"
+        return "full" if self.has_laya else "nim"
 
     @property
-    def jev_model(self) -> str:
-        return self.profile.get("jev.model") or self.typesafe_model
+    def decision_model(self) -> str:
+        """The Laya checkpoint: profile `laya.model`, then `LAYA_MODEL`; `auto` lets Laya's router pick by language."""
+        return self.profile.get("laya.model") or self.laya_model or "auto"
 
     @property
     def use_live_apis(self) -> bool:
@@ -308,7 +320,7 @@ def get_settings(profile: str | Profile | None = None, overrides: dict[str, Any]
     env_file = load_env()
     prof = profile if isinstance(profile, Profile) else load_profile(profile, overrides)
     notes: list[str] = []
-    nv, ts = os.environ.get("NVIDIA_API_KEY"), os.environ.get("TYPESAFE_API_KEY")
+    nv, laya_key = os.environ.get("NVIDIA_API_KEY"), os.environ.get("LAYA_API_KEY")
     nemo = os.environ.get("NVIDIA_NEMOTRON_API_KEY")
     gemini = os.environ.get("GEMINI_API_KEY")
     provider = _env("COPILOT_CHAT_PROVIDER").strip().lower() or "nim"
@@ -317,8 +329,10 @@ def get_settings(profile: str | Profile | None = None, overrides: dict[str, Any]
         provider = "nim"
     if nv and not is_real_key(nv):
         notes.append("NVIDIA_API_KEY holds the placeholder value; NIM counts as missing.")
-    if ts and not is_real_key(ts):
-        notes.append("TYPESAFE_API_KEY holds the placeholder value; Jev counts as missing.")
+    laya_mode = _env("LAYA_MODE").strip().lower() or "local"
+    if laya_mode not in {"local", "http", "off"}:
+        notes.append(f"LAYA_MODE={laya_mode!r} is unknown; using local.")
+        laya_mode = "local"
     return Settings(
         env_file=env_file,
         nvidia_api_key=nv if is_real_key(nv) else None,
@@ -330,7 +344,7 @@ def get_settings(profile: str | Profile | None = None, overrides: dict[str, Any]
         google_chat_model=_env("GOOGLE_CHAT_MODEL"),
         google_small_model=_env("GOOGLE_SMALL_MODEL"),
         google_timeout=float(_env("GOOGLE_TIMEOUT")),
-        typesafe_api_key=ts if is_real_key(ts) else None,
+        laya_api_key=laya_key if is_real_key(laya_key) else None,
         nvidia_base_url=_env("NVIDIA_BASE_URL"),
         chat_model=_env("NIM_CHAT_MODEL"),
         small_model=_env("NIM_SMALL_MODEL"),
@@ -339,9 +353,11 @@ def get_settings(profile: str | Profile | None = None, overrides: dict[str, Any]
         temperature=float(prof.get("llm.temperature", float(_env("NIM_TEMPERATURE")))),
         max_tokens=int(_env("NIM_MAX_TOKENS")),
         nim_timeout=float(_env("NIM_TIMEOUT")),
-        typesafe_base_url=_env("TYPESAFE_BASE_URL").rstrip("/"),
-        typesafe_model=_env("TYPESAFE_MODEL"),
-        typesafe_timeout=float(_env("TYPESAFE_TIMEOUT")),
+        laya_mode=laya_mode,
+        laya_model=_env("LAYA_MODEL").strip() or "auto",
+        laya_device=_env("LAYA_DEVICE").strip(),
+        laya_base_url=_env("LAYA_BASE_URL").rstrip("/"),
+        laya_timeout=float(_env("LAYA_TIMEOUT")),
         apis_live=_truthy(_env("COPILOT_APIS_LIVE")),
         http_contact=_env("COPILOT_HTTP_CONTACT"),
         live_tests=_truthy(_env("COPILOT_LIVE_TESTS")),

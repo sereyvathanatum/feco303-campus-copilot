@@ -16,7 +16,7 @@ from campus_copilot.llm.stub import StubClient
 from campus_copilot.rag import condense
 from campus_copilot.rag.answer import answer
 from campus_copilot.rag.embeddings import HashingEmbedder, NimEmbedder
-from campus_copilot.rag.retrieve import MODES, retrieve
+from campus_copilot.rag.retrieve import MODES, RRF_K, retrieve
 from campus_copilot.rag.stores.base import available_backends, get_store
 from campus_copilot.schemas import ABSTAIN_TEXT
 
@@ -107,10 +107,39 @@ def test_store_implements_vectorstore_interface(pack_env):
 
 @pytest.mark.parametrize("mode", [m for m in MODES if m != "dense+judge"])
 def test_every_mode_returns_labelled_results(pack_env, mode):
-    result = retrieve("What is the penalty for late assignments?", offline(), mode=mode, k=3)
+    result = retrieve("What is the administration fee for the undergraduate program?", offline(), mode=mode, k=3)
     assert result.mode == mode and result.latency_ms >= 0
     assert result.chunks and all(c.score_type for c in result.chunks)
-    assert any(c.source_id == "campus-handbook" and c.page == 6 for c in result.chunks)
+    assert any(c.source_id == "academic-info" for c in result.chunks)
+
+
+def test_setup_record_explains_what_the_search_ran_against(pack_env):
+    """The node debugger's first RAG step: the knowledge base, both encoders, and the query as each reads it."""
+    result = retrieve("library fines", offline(), mode="hybrid+rerank", k=3)
+    setup = result.setup
+    assert setup["mode"] == "hybrid+rerank" and setup["first stage"] == "hybrid" and setup["second stage"] == "rerank"
+    assert "chunks from" in setup["knowledge base"] and setup["top_k"] == 3
+    assert '"library"' in setup["lexical match expression"] and '"fines"' in setup["lexical match expression"]
+    assert "hashing" in setup["dense encoder"] and "embedded under" in setup["vectors for it"]
+    # a query of nothing but stop words is the common "why did lexical find nothing?" case
+    assert "empty" in retrieve("what is it about", offline(), mode="lexical", k=3).setup["lexical match expression"]
+
+
+def test_fusion_keeps_the_arithmetic_that_ranked_each_chunk(pack_env):
+    result = retrieve("library fines", offline(), mode="hybrid", k=3)
+    terms = [c.signals.get("rrf_terms") for c in result.chunks]
+    assert all(t and "-> 1/" in t for t in terms)
+    for chunk in result.chunks:
+        expected = sum(1.0 / (RRF_K + int(part.split("#")[1].split(" ")[0]))
+                       for part in chunk.signals["rrf_terms"].split(" + "))
+        assert abs(chunk.signals["rrf"] - expected) < 1e-4
+
+
+def test_chunk_brief_locates_the_chunk_for_a_follow_up_lookup(pack_env):
+    chunk = retrieve("library fines", offline(), mode="hybrid", k=1).chunks[0]
+    brief = chunk.brief()
+    assert brief["chunk_id"] == chunk.chunk_id and brief["source_id"] == chunk.source_id
+    assert "page" in brief and "section" in brief
 
 
 def test_offline_rerank_uses_the_local_heuristic_and_orders_best_first(pack_env):
@@ -152,14 +181,14 @@ def test_failed_nim_reranker_falls_back_to_local(pack_env):
     assert any("HTTP 410" in n for n in outcome.notes)
 
 
-def test_jev_reranker_keeps_verdicts_for_the_passage_filter(pack_env):
+def test_laya_reranker_keeps_verdicts_for_the_passage_filter(pack_env):
     from campus_copilot.decisions.base import get_decider
     from campus_copilot.rag.rerank import rerank
 
     settings = offline()
     candidates = retrieve("library fines", settings, mode="hybrid", k=4).chunks
     decider = get_decider(settings, kind="keyword")
-    outcome = rerank(settings, "library fines", candidates, k=4, decider=decider, backend="jev")
+    outcome = rerank(settings, "library fines", candidates, k=4, decider=decider, backend="laya")
     assert all(c.judge and "has_answer" in c.judge for c in outcome.chunks)
 
 
@@ -172,8 +201,10 @@ def test_passages_carry_rank_and_relevance_into_the_prompt(pack_env):
 
 
 def test_lexical_matches_codes_and_numbers(pack_env):
-    result = retrieve("extension 999", offline(), mode="lexical", k=3)
-    assert {(c.source_id, c.page) for c in result.chunks[:2]} == {("campus-handbook", 18), ("campus-handbook", 19)}
+    """Exact tokens a dense encoder blurs: a test score and a fee, matched verbatim by bm25."""
+    result = retrieve("IELTS 5.5 TOEFL 68", offline(), mode="lexical", k=3)
+    assert all(c.source_id == "academic-info" for c in result.chunks)
+    assert "Admission Criteria" in (result.chunks[0].section or "")
 
 
 # -------------------------------------------------------------- model client
@@ -228,9 +259,9 @@ def test_parse_json_object_is_tolerant():
 def test_stub_answers_turn_one_and_abstains_on_turn_three(pack_env):
     settings = offline()
     llm = LLM([StubClient()], settings)
-    q1 = "What happens after more than three missed lab sessions?"
+    q1 = "What is the yearly tuition fee for Cyber Security?"
     a1 = answer(q1, retrieve(q1, settings).chunks, llm)
-    assert not a1.grounded.abstained and "[campus-handbook p.4]" in a1.text
+    assert not a1.grounded.abstained and "[academic-info" in a1.text
     q3 = "What is the cafeteria menu on Friday?"
     a3 = answer(q3, retrieve(q3, settings).chunks, llm)
     assert a3.grounded.abstained and a3.text == ABSTAIN_TEXT
@@ -241,13 +272,13 @@ def test_unknown_citations_are_dropped():
         def complete(self, messages, **kw):
             reply = super().complete(messages, **kw)
             reply.text = ('{"answer": "Fines are 500 riel.", "citations": [{"source_id": "made-up", "page": 9}, '
-                          '{"source_id": "campus-handbook", "page": 11}], "abstained": false}')
+                          '{"source_id": "camtech-prospectus", "page": 11}], "abstained": false}')
             return reply
 
     llm = LLM([Canned()], offline())
-    passages = [{"source_id": "campus-handbook", "page": 11, "section": None, "text": "500 riel per day"}]
+    passages = [{"source_id": "camtech-prospectus", "page": 11, "section": None, "text": "500 riel per day"}]
     grounded, reply = llm.grounded_answer("fine?", passages)
-    assert [c.source_id for c in grounded.citations] == ["campus-handbook"]
+    assert [c.source_id for c in grounded.citations] == ["camtech-prospectus"]
     assert any("made-up" in n for n in reply.notes)
 
 
@@ -276,9 +307,9 @@ def test_condense_gate_modes():
     history = [{"role": "user", "content": "x"}]
     assert condense.gate("off", history, "handbook", 0.9, 0.5)[0] is False
     assert condense.gate("always", history, "rooms", None, 0.5)[0] is True
-    assert condense.gate("jev_gated", history, "handbook", 0.8, 0.5)[0] is True
-    assert condense.gate("jev_gated", history, "handbook", 0.2, 0.5)[0] is False
-    assert condense.gate("jev_gated", [], "handbook", 0.9, 0.5)[0] is False
+    assert condense.gate("laya_gated", history, "handbook", 0.8, 0.5)[0] is True
+    assert condense.gate("laya_gated", history, "handbook", 0.2, 0.5)[0] is False
+    assert condense.gate("laya_gated", [], "handbook", 0.9, 0.5)[0] is False
 
 
 def test_stub_rewrites_the_demo_follow_up():

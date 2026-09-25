@@ -1,0 +1,7 @@
+# E05: the Laya decision model, with Laya's router choosing the checkpoint by language.
+
+[router]
+kind = "laya"
+
+[laya]
+model = "auto"

@@ -24,9 +24,9 @@ def test_app_builds(offline_ui):
 def test_chat_turn_fills_every_panel(offline_ui):
     state = ui.new_state("offline")
     chat, state, _, decisions, sources, tools, trace, memory, confirm, cancel = ui.send(
-        {"text": "What happens after more than three missed lab sessions?", "files": []}, [], state)
-    assert "[campus-handbook p.4]" in chat[-1]["content"] and "STUB" in decisions
-    assert "campus-handbook" in sources and trace and memory["messages_stored"] == 2
+        {"text": "What is the yearly tuition fee for Cyber Security?", "files": []}, [], state)
+    assert "[academic-info" in chat[-1]["content"] and "STUB" in decisions
+    assert "academic-info" in sources and trace and memory["messages_stored"] == 2
     assert confirm["visible"] is False
 
 
@@ -44,6 +44,6 @@ def test_retrieval_lab_and_knowledge_base_views(offline_ui):
     table, evidence = ui.run_lab("library fines", ["lexical", "dense"], ["sqlite", "sqlite_vec"], 3, "offline")
     assert table == evidence and "| lexical |" in table and "Top-k overlap" in table
     assert [row[0] for row in ui.stage_table()] == ["gather", "extract", "clean", "chunk", "embed", "store", "verify"]
-    assert "campus-handbook" in ui.document_choices()
-    assert "chunks" in ui.document_view("campus-handbook")
+    assert "camtech-prospectus" in ui.document_choices()
+    assert "chunks" in ui.document_view("camtech-prospectus")
     assert ui.verify_table()

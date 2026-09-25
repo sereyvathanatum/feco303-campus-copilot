@@ -1,4 +1,4 @@
 # E12: simple questions go to the small model (decision-model complexity score).
 
 [llm]
-model_routing = "jev_complexity"
+model_routing = "laya_complexity"

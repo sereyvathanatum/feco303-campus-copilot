@@ -41,7 +41,7 @@ def _cases() -> list[dict]:
     return load_cases()
 
 
-def jev_score(decider, answer: str, passages: list[str]) -> float | None:
+def laya_score(decider, answer: str, passages: list[str]) -> float | None:
     claims = [s for s in sentences(re.sub(r"\[[^\]]+\]", "", answer)) if len(s.split()) > 3]
     if not claims or not passages:
         return None
@@ -62,8 +62,8 @@ def run_judges(settings, rows: list[dict]) -> dict:
         verdict, reply = llm.judge_faithfulness(row["answer"], row.get("sources") or [])
         row["judge_llm"] = verdict.get("score")
         row["judge_llm_stub"] = reply.stub
-        row["judge_jev"] = jev_score(decider, row["answer"], row.get("sources") or [])
-        row["judge_jev_stub"] = decider.stub
+        row["judge_laya"] = laya_score(decider, row["answer"], row.get("sources") or [])
+        row["judge_laya_stub"] = decider.stub
     manual = config.REPO_ROOT / "eval" / "manual_scoring.csv"
     human = {}
     if manual.is_file():
@@ -81,7 +81,7 @@ def run_judges(settings, rows: list[dict]) -> dict:
 def disagreements(rows: list[dict], gap: float = 2.0) -> list[dict]:
     out = []
     for row in rows:
-        scores = {k: row.get(k) for k in ("judge_human", "judge_llm", "judge_jev") if row.get(k) is not None}
+        scores = {k: row.get(k) for k in ("judge_human", "judge_llm", "judge_laya") if row.get(k) is not None}
         if len(scores) >= 2 and max(scores.values()) - min(scores.values()) >= gap:
             out.append({"id": row["id"], **scores, "answer": row.get("answer", "")[:160]})
     return out
@@ -91,8 +91,8 @@ def disagreement_report(rows: list[dict]) -> str:
     items = disagreements(rows)
     if not items:
         return "No case where the judges differ by two points or more."
-    lines = ["| case | human | LLM | Jev | answer |", "|---|---:|---:|---:|---|"]
+    lines = ["| case | human | LLM | Laya | answer |", "|---|---:|---:|---:|---|"]
     for item in items:
         lines.append(f"| {item['id']} | {item.get('judge_human', '-')} | {item.get('judge_llm', '-')} | "
-                     f"{item.get('judge_jev', '-')} | {item['answer']} |")
+                     f"{item.get('judge_laya', '-')} | {item['answer']} |")
     return "\n".join(lines)

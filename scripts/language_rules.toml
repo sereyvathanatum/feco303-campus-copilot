@@ -15,7 +15,8 @@ words = ["he", "she", "him", "her", "his", "hers"]
 [exempt]
 # Whole files that reproduce third-party or rule text.
 paths = ["scripts/language_rules.toml", "data/api_fixtures/", "data/images/",
-         "thunder-tests/thunderclient.json"]   # holds the verbatim Jev reference call
+         "thunder-tests/thunderclient.json",   # holds the verbatim Laya reference call
+         "data/sources/Academic_Info.md"]       # CamTech's own text, kept verbatim as the knowledge source
 # Files whose chat-input fields are exempt; other fields are still checked.
 chat_input_files = ["eval/", "data/demo_turns.jsonl", "data/fixtures/"]
 chat_input_fields = ["message", "history", "state", "variants"]

@@ -1,7 +1,7 @@
 """The "System 2" baseline: the chat model answers the same questions as structured JSON (E05).
 
 Malformed or incomplete replies are counted, so E05 can compare latency, cost,
-malformed outputs, and accuracy against Jev and the keyword stub.
+malformed outputs, and accuracy against Laya and the keyword stub.
 """
 
 from __future__ import annotations

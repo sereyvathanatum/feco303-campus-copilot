@@ -10,7 +10,7 @@ from campus_copilot.rag.retrieve import retrieve
 
 def test_every_profile_loads_and_inherits_from_baseline():
     names = config.list_profiles()
-    assert {"e01_zero_shot", "e05_jev", "e09_condense_off", "e13_controls_off", "e15_long_context"} <= set(names)
+    assert {"e01_zero_shot", "e05_laya", "e09_condense_off", "e13_controls_off", "e15_long_context"} <= set(names)
     for name in names:
         profile = config.load_profile(name)
         assert profile.get("rag.top_k") is not None and profile.capabilities
@@ -28,14 +28,16 @@ def test_text_to_sql_answers_and_the_sandbox_stops_other_accounts(pack_env):
         copilot.close()
 
 
-def test_long_context_puts_the_whole_handbook_in_the_prompt(pack_env):
-    result = retrieve("What is the penalty for late assignments?", config.get_settings("e15_long_context"))
-    pages = {c.page for c in result.chunks}
-    assert result.mode == "long_context" and pages == set(range(1, 21)) - {p for p in range(1, 21) if p not in pages}
-    assert len(pages) >= 18 and "long context" in result.notes[0]
+def test_long_context_puts_the_whole_document_in_the_prompt(pack_env):
+    from campus_copilot.ingest import store as kb
+
+    result = retrieve("What is the yearly tuition fee for Cyber Security?", config.get_settings("e15_long_context"))
+    total = kb.connect().execute("SELECT count(*) FROM chunks WHERE source_id = 'academic-info'").fetchone()[0]
+    assert result.mode == "long_context" and len(result.chunks) == total
+    assert {c.source_id for c in result.chunks} == {"academic-info"} and "long context" in result.notes[0]
     copilot = offline_copilot(None, **{"rag.mode": "long_context"})
     try:
-        answer = copilot.ask("What is the penalty for late assignments?")
-        assert answer.kind == "answer" and any(c.page == 6 for c in answer.citations)
+        answer = copilot.ask("What is the yearly tuition fee for Cyber Security?")
+        assert answer.kind == "answer" and any(c.source_id == "academic-info" for c in answer.citations)
     finally:
         copilot.close()

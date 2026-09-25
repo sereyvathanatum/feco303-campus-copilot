@@ -28,7 +28,7 @@ SECRET_PATTERNS = [
     re.compile(r"AQ\.[A-Za-z0-9_\-]{20,}"),
     re.compile(r"AIza[0-9A-Za-z_\-]{20,}"),
     re.compile(r"(?i)(bearer\s+)[A-Za-z0-9._\-]{12,}"),
-    re.compile(r"(?i)(typesafe_api_key\s*[=:]\s*)[^\s\"',]+"),
+    re.compile(r"(?i)(laya_api_key\s*[=:]\s*)[^\s\"',]+"),
 ]
 ACCOUNT_ID = re.compile(r"\bA\d{4}\b")
 log = logging.getLogger("campus_copilot.trace")

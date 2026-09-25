@@ -32,6 +32,6 @@ def test_secret_scan_passes_on_repository():
 
 
 def test_secret_scan_catches_planted_keys():
-    planted = "NVIDIA_API_KEY=nvapi-" + "A1b2C3d4E5f6G7h8I9j0K1" + "\nTYPESAFE_API_KEY=" + "ts_live_0123456789"
+    planted = "NVIDIA_API_KEY=nvapi-" + "A1b2C3d4E5f6G7h8I9j0K1" + "\nLAYA_API_KEY=" + "laya_srv_0123456789"
     assert len(check_secrets.scan_text(planted)) == 2
-    assert check_secrets.scan_text("TYPESAFE_API_KEY=typesafe-replace-with-a-real-key") == []
+    assert check_secrets.scan_text("LAYA_API_KEY=laya-replace-with-a-real-key") == []

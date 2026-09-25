@@ -11,11 +11,11 @@ def test_follow_up_rewritten_and_threads_isolated(pack_env):
     board, copilot = demo_board(6)
     assert board.passed == board.expected(6) == [1, 2, 3]
     query = board.outcomes[1].result.query
-    assert "late assignments" in query["rewritten"] and query["original"] == "And for late assignments?"
+    assert "master's degree" in query["rewritten"] and query["original"] == "And for a master's degree?"
     assert all(s.get("gate") == "rag.condense_query = always" or not s.get("ran") for s in spans(copilot, board, "condense_query"))
     fresh = offline_copilot(6)
     try:
-        result = fresh.ask("And for late assignments?", thread_id="another-thread")
+        result = fresh.ask("And for a master's degree?", thread_id="another-thread")
         assert not (result.query or {}).get("rewritten")  # a new thread has no history to resolve against
     finally:
         fresh.close()

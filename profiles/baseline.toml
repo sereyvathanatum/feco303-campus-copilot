@@ -39,7 +39,7 @@ prompt_style = "few_shot"      # zero_shot | few_shot            (E01)
 structured_output = true       #                                  (E01)
 temperature = 0.0              #                                  (E01)
 thinking = false               #                                  (E12)
-model_routing = "off"          # off | jev_complexity             (E12)
+model_routing = "off"          # off | laya_complexity            (E12)
 
 [rag]
 chunk_size = 220               # tokens (or characters when length_unit = chars)
@@ -51,12 +51,12 @@ tokenizer = "auto"             # auto | hf | tiktoken | builtin
 embed_max_tokens = 32768       # E02 sets 256 to mimic a small-window embedder
 swap_input_type = false        # deliberate bug for E02
 mode = "hybrid+rerank"         # lexical | dense | hybrid | dense+rerank | hybrid+rerank | dense+judge (E03)
-reranker = "auto"              # auto | nim | jev | local   (auto = nim with a NIM key, else local)
+reranker = "laya"              # auto | nim | laya | local  (auto = laya, else nim with a NIM key, else local)
 rerank_min_relevance = 0.0     # drop reranked passages below this relevance (0-1); 0 keeps the top_k
 store = "sqlite"               # sqlite | sqlite_vec | chroma      (E03)
-condense_query = "jev_gated"   # jev_gated | always | off         (E09)
-passage_filter = true          # Jev passage questions (active with the guards capability)
-answer_check = true            # Jev claim_support check (active with the guards capability)
+condense_query = "laya_gated"  # laya_gated | always | off        (E09)
+passage_filter = true          # Laya passage questions (active with the guards capability)
+answer_check = true            # Laya claim_support check (active with the guards capability)
 
 [data]
 include_pdf = true
@@ -75,7 +75,7 @@ requests_per_minute = 35       # client-side limiter, under the NIM free-tier ra
 strip_headers = true
 
 [router]
-kind = "jev"                   # keyword | llm | jev              (E05)
+kind = "laya"                  # keyword | llm | laya             (E05)
 confidence_low = 0.50
 confidence_high = 0.80
 
@@ -94,7 +94,7 @@ passage_has_answer = 0.55
 claim_support = 0.80
 
 [agent]
-mode = "json"                  # native | json | jev_dispatch     (E06, E08)
+mode = "json"                  # native | json | laya_dispatch    (E06, E08)
 max_tool_calls = 4
 force = ""                     # "" | "on" | "off"                (E08)
 
@@ -117,13 +117,15 @@ block = 0.70
 [apis]
 live = true                    # false = replay recorded fixtures
 
-[jev]
-model = ""                     # "" = TYPESAFE_MODEL; evaluation profiles pin jev-1.13.0
-passage_workers = 8
+[laya]
+model = ""                     # "" = LAYA_MODEL; auto = Laya's router picks english or multilingual by language
+head_max_len = 448             # tokens for instructions + options per question (checkpoint default 192)
+max_len = 1024                 # tokens per question including the state (English checkpoint default 512)
+passage_workers = 8            # parallel requests in LAYA_MODE=http; local mode batches instead
 
 # Prices in USD per million tokens. "unknown" stays unknown in reports.
-[prices.jev]
-input = 0.042
+[prices.laya]                  # open weights on local hardware: no per-token price
+input = 0.0
 output = 0.0
 
 [prices.nim_chat]

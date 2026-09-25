@@ -1,20 +1,3 @@
 source_id,file,format,title,language,licence,origin,added
-campus-handbook,campus-handbook.pdf,pdf,CamTech Campus Handbook 2026-2027 (demo edition),en+km,CC-BY-4.0 (written for this pack),written for this pack; built by scripts/make_pdfs.py,2026-09-23
-academic-rules-km,academic-rules-km.md,md,វិន័យសិក្សាសំខាន់ៗ,km,CC-BY-4.0 (written for this pack),written for this pack,2026-09-23
-campus-services-faq-km,campus-services-faq-km.md,md,សំណួរញឹកញាប់អំពីសេវាកម្មក្នុងបរិវេណសាលា,km,CC-BY-4.0 (written for this pack),written for this pack,2026-09-23
-campus-services-faq,campus-services-faq.md,md,Campus services FAQ,en,CC-BY-4.0 (written for this pack),written for this pack,2026-09-23
-topic-agents,topic-agents.md,md,Agent loops,en,CC-BY-4.0 (written for this pack),written for this pack,2026-09-23
-topic-chunking,topic-chunking.md,md,Chunking documents for retrieval,en,CC-BY-4.0 (written for this pack),written for this pack,2026-09-23
-topic-decision-models,topic-decision-models.md,md,System One decision models,en,CC-BY-4.0 (written for this pack),written for this pack,2026-09-23
-topic-embeddings-vector-search,topic-embeddings-vector-search.md,md,Embeddings and vector search,en,CC-BY-4.0 (written for this pack),written for this pack,2026-09-23
-topic-evaluation,topic-evaluation.md,md,Evaluating LLM applications,en,CC-BY-4.0 (written for this pack),written for this pack,2026-09-23
-topic-fine-tuning-vs-rag,topic-fine-tuning-vs-rag.md,md,"Prompting, RAG, tools, or fine-tuning",en,CC-BY-4.0 (written for this pack),written for this pack,2026-09-23
-topic-llm-basics,topic-llm-basics.md,md,Large language models and transformers,en,CC-BY-4.0 (written for this pack),written for this pack,2026-09-23
-topic-mcp,topic-mcp.md,md,The Model Context Protocol,en,CC-BY-4.0 (written for this pack),written for this pack,2026-09-23
-topic-memory-and-state,topic-memory-and-state.md,md,Conversation memory and state,en,CC-BY-4.0 (written for this pack),written for this pack,2026-09-23
-topic-multimodal,topic-multimodal.md,md,Vision-language models,en,CC-BY-4.0 (written for this pack),written for this pack,2026-09-23
-topic-observability,topic-observability.md,md,"Traces, latency, and cost",en,CC-BY-4.0 (written for this pack),written for this pack,2026-09-23
-topic-prompt-injection,topic-prompt-injection.md,md,Prompt injection and tool-layer safety,en,CC-BY-4.0 (written for this pack),written for this pack,2026-09-23
-topic-prompting,topic-prompting.md,md,Prompt design and structured output,en,CC-BY-4.0 (written for this pack),written for this pack,2026-09-23
-topic-rag,topic-rag.md,md,Retrieval-augmented generation,en,CC-BY-4.0 (written for this pack),written for this pack,2026-09-23
-topic-tool-calling,topic-tool-calling.md,md,Tool and function calling,en,CC-BY-4.0 (written for this pack),written for this pack,2026-09-23
+camtech-prospectus,CamTech-Prospectus.pdf,pdf,CamTech University Prospectus,en,CamTech University (course material),data/inbox; published by CamTech University,2026-09-23
+academic-info,Academic_Info.md,md,CamTech Academic Information,en,CamTech University (course material),data/inbox; converter-made Markdown of the academic information pages,2026-09-23

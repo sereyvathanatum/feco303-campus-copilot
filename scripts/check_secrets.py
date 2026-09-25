@@ -2,7 +2,7 @@
 
 Rejects any tracked or new file containing a string shaped like a real key:
 `nvapi-` followed by 20 or more characters, or a non-placeholder
-`TYPESAFE_API_KEY=` value. Exit code 1 when a candidate secret is found.
+`LAYA_API_KEY=` value (the optional laya-serve bearer key). Exit code 1 when a candidate secret is found.
 """
 
 from __future__ import annotations
@@ -14,8 +14,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 NVAPI = re.compile(r"nvapi-[A-Za-z0-9_\-]{20,}")
-TYPESAFE = re.compile(r"TYPESAFE_API_KEY\s*=\s*['\"]?([A-Za-z0-9_\-]{8,})")
-PLACEHOLDERS = {"typesafe-replace-with-a-real-key"}
+LAYA_KEY = re.compile(r"LAYA_API_KEY\s*=\s*['\"]?([A-Za-z0-9_\-]{8,})")
+PLACEHOLDERS = {"laya-replace-with-a-real-key"}
 SKIP_SUFFIXES = {".png", ".jpg", ".jpeg", ".gif", ".pdf", ".ttf", ".otf", ".db", ".sqlite", ".ico",
                  ".woff", ".woff2"}
 
@@ -40,9 +40,9 @@ def scan_text(text: str) -> list[tuple[int, str]]:
     for number, line in enumerate(text.splitlines(), start=1):
         if NVAPI.search(line) and "nvapi-replace-with-a-real-key" not in line:
             hits.append((number, "nvapi key shape"))
-        for match in TYPESAFE.finditer(line):
+        for match in LAYA_KEY.finditer(line):
             if not _is_reference(match.group(1)):
-                hits.append((number, "TYPESAFE_API_KEY value"))
+                hits.append((number, "LAYA_API_KEY value"))
     return hits
 
 

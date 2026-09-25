@@ -26,7 +26,7 @@ Threads and checkpoints (`SqliteSaver`), the model window (`trim_messages`), fol
 2. `python -m campus_copilot.cli step 6 --chat`
 
 ## What to observe
-Turn 2 ('And for late assignments?') is rewritten into a standalone query; the Sources panel shows the original next to the rewrite. At this step the rewrite runs on every RAG turn with history (`always`). A new thread has no history, so the same follow-up is searched literally.
+Turn 2 ('And for a master's degree?') is rewritten into a standalone query; the Sources panel shows the original next to the rewrite. At this step the rewrite runs on every RAG turn with history (`always`). A new thread has no history, so the same follow-up is searched literally.
 
 ## Checkpoint
 `python -m campus_copilot.cli step 6 --check` runs `tests/steps/test_step_06.py`. Read its output for the numbers; this chapter

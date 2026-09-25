@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.2.0 (unreleased, 24 Sep 2026)
+
+- **Decision model:** TypeSafe Jev is replaced by Laya, ConvAI's open-weights System One model, run
+  in-process (`pip install laya`, `LAYA_MODE=local`) or behind `laya-serve` (`LAYA_MODE=http`). No key and no
+  per-token cost. Settings, profiles, the CLI (`laya-smoke`), fixtures, and docs renamed; `docs/laya_primer.md`
+  replaces the Jev primer. Recorded replay responses (`data/fixtures/laya/`) still need a live recording run.
+- **Reranker:** `rag.reranker = "laya"` is the default; `auto` now prefers Laya, then NIM, then the local
+  heuristic, and a `laya` setting without Laya installed falls back the same way and says so in the notes.
+- **Knowledge base:** the documents written for the pack (synthetic handbook PDF, FAQs, Khmer rules, the 15
+  topic notes) and `scripts/make_pdfs.py` are removed. The sources are now CamTech's own
+  `CamTech-Prospectus.pdf` and `Academic_Info.md`, with new probes; demo turns 1-2, the document cases in
+  `eval/cases.jsonl` (plus three prospectus cases), the tests, and the experiment references are re-grounded
+  on them.
+- **Debugging RAG:** the node debug view (`--debug-nodes`, `/nodes`, `COPILOT_DEBUG_NODES=1`) opens with what
+  the search ran against (knowledge base size, encoder and its vector count, FTS5, the keyword expression),
+  prints lexical and dense ranks per chunk, and with `--full` the chunk id, location, and fusion arithmetic.
+  `cli retrieve --stages` prints the same stages without running a turn.
+- **Tutorial:** `TUTORIAL.md` (project root) walks the build from project setup to the finished chatbot, with the ingestion flows (first build, add, change, re-chunk, remove, switch embedder, resume).
+
 ## 1.1.0 (unreleased, 23 Sep 2026)
 
 RAG quality fixes found while ingesting a converter-made Markdown document (PDF to Markdown, with tables).

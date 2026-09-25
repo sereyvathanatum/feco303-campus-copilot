@@ -18,7 +18,7 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont, features
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "data" / "images"
-KHMER_FONT = ROOT / "data" / "sources" / "_src" / "fonts" / "NotoSansKhmer-Regular.ttf"
+KHMER_FONT = ROOT / "data" / "fonts" / "NotoSansKhmer-Regular.ttf"  # SIL OFL 1.1, see data/fonts/OFL.txt
 KHMER_RUN = re.compile(r"[ក-៿᧠-᧿\s]+")
 SCRIPT_RUNS = re.compile(r"[ក-៿᧠-᧿]+(?:\s+[ក-៿᧠-᧿]+)*|[^ក-៿᧠-᧿]+")
 

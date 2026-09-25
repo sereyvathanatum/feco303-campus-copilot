@@ -1,7 +1,7 @@
 """Follow-up rewriting before retrieval (docs/implementation-plan.md §8.4.4).
 
 Gate (`rag.condense_query`):
-* `jev_gated` (default): only when the route is `handbook`, history is not empty, and
+* `laya_gated` (default): only when the route is `handbook`, history is not empty, and
   the `follow_up` Noul reaches `policy.follow_up`;
 * `always`: every RAG turn with history;
 * `off`: retrieval uses the raw message.

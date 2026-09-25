@@ -66,7 +66,7 @@ def main() -> int:
         live_env = {**env, "COPILOT_LIVE_TESTS": "1"}
         live_env.pop("COPILOT_PROFILE", None)
         run("cli check (live)", cli + ["check"], live_env, results)
-        run("cli jev-smoke", cli + ["jev-smoke"], live_env, results)
+        run("cli laya-smoke", cli + ["laya-smoke"], live_env, results)
         run("live test suite", [python, "-m", "pytest", "-q", "-m", "live", "-p", "no:cacheprovider"], live_env, results)
     return report(results)
 

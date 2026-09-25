@@ -13,7 +13,7 @@ from campus_copilot.llm.stub import StubClient
 TURN_8 = "Free room with a projector tomorrow 2–4 pm? And will it rain then?"
 
 
-@pytest.mark.parametrize("mode", ["json", "native", "jev_dispatch"])
+@pytest.mark.parametrize("mode", ["json", "native", "laya_dispatch"])
 def test_agent_modes_call_both_tools(pack_env, mode):
     copilot = offline_copilot(None, **{"agent.mode": mode})
     try:

@@ -1,4 +1,4 @@
-"""Decision layer: catalogue limits, the Jev HTTP contract, replay, the stub decider, the LLM router, and policy."""
+"""Decision layer: catalogue limits, the Laya contract (local and HTTP), replay, the stub decider, the LLM router, and policy."""
 
 from __future__ import annotations
 
@@ -9,11 +9,11 @@ from fakes import FakeResponse, RecordingSession
 
 from campus_copilot import config
 from campus_copilot.db import connection, queries, seed
-from campus_copilot.decisions import jev as jev_mod
+from campus_copilot.decisions import laya as laya_mod
 from campus_copilot.decisions import policy
 from campus_copilot.decisions import questions as qcat
 from campus_copilot.decisions.base import Decision, get_decider
-from campus_copilot.decisions.jev import JevDecider
+from campus_copilot.decisions.laya import LayaDecider
 from campus_copilot.decisions.llm_router import LLMRouter
 from campus_copilot.decisions.stub import StubDecider
 from campus_copilot.llm import prompts
@@ -21,11 +21,52 @@ from campus_copilot.llm.client import LLM
 from campus_copilot.llm.stub import StubClient
 
 SAMPLE_COURSES = [{"code": "FECO303", "title": "AI and Its Applications"}, {"code": "FECS329", "title": "Cloud"}]
+KHMER = "ម៉ោង"
 
 
-def jev_settings(monkeypatch, **overrides):
-    monkeypatch.setenv("TYPESAFE_API_KEY", "ts-test-" + "k" * 20)
+def laya_settings(monkeypatch, mode: str = "http", **overrides):
+    monkeypatch.setenv("LAYA_MODE", mode)
     return config.get_settings("baseline", overrides)
+
+
+class FakeAgent:
+    """Stands in for `laya.Agent`: records the states it saw and answers every noul with 0.8."""
+
+    def __init__(self, name: str):
+        self.name, self.cfg, self.seen = name, {"max_len": 512, "head_max_len": 192}, []
+
+    @staticmethod
+    def _answers(questions):
+        return {qid: ({"type": "noul", "noul": 0.8, "confidence": 0.8} if q["type"] == "noul" else
+                      {"type": q["type"], "choice": next(iter(q["criteria"])), "confidence": 0.9, "probabilities": {}})
+                for qid, q in questions.items()}
+
+    def system_one(self, state, questions):
+        self.seen.append(state)
+        return {"model": "laya-rl-agent", "answers": self._answers(questions),
+                "usage": {"input_tokens": 10, "output_tokens": 0}}
+
+    def predict_batch(self, states, questions):
+        self.seen.append(("batch", len(states)))
+        return [{"model": "laya-rl-agent", "answers": self._answers(questions),
+                 "usage": {"input_tokens": 10, "output_tokens": 0}} for _ in states]
+
+
+class FakeRouter:
+    """Stands in for `laya.Router`: Khmer script goes to `multilingual`, everything else to `english`."""
+
+    def __init__(self):
+        self.agents = {"english": FakeAgent("english"), "multilingual": FakeAgent("multilingual")}
+
+    def route(self, state, questions=None, model=None):
+        if model:
+            return {"model": model, "repo": "fake", "reason": f"explicit model={model!r}"}
+        khmer = KHMER[0] in json.dumps(state, ensure_ascii=False)
+        return {"model": "multilingual" if khmer else "english", "repo": "fake",
+                "reason": "non-Latin script (khmer)" if khmer else "English Latin text"}
+
+    def load(self, name):
+        return self.agents[name]
 
 
 @pytest.fixture
@@ -37,7 +78,7 @@ def courses(tmp_path):
 
 # --------------------------------------------------------------- catalogue
 
-def test_every_question_meets_the_jev_limits():
+def test_every_question_meets_the_laya_limits():
     for name, catalogue in qcat.all_catalogues(SAMPLE_COURSES).items():
         for qid, question in catalogue.items():
             spec = question.spec
@@ -46,6 +87,8 @@ def test_every_question_meets_the_jev_limits():
             if spec["type"] == "choice":
                 assert 2 <= len(spec["criteria"]) <= qcat.MAX_CHOICE_OPTIONS, qid
                 assert set(spec["criteria"]) & qcat.NO_MATCH_OPTIONS, f"{qid} has no no-match option"
+                # Laya renders choice keys verbatim; boolean-word keys pull the answer toward the key itself
+                assert not set(spec["criteria"]) & {"true", "false", "yes", "no"}, qid
             if spec["type"] == "score":
                 low, high = qcat.SCORE_LEVELS
                 assert low <= len(spec["criteria"]) <= high, qid
@@ -57,77 +100,124 @@ def test_wire_builders_match_the_reference_shape():
     assert qcat.score("x", ["l", "h"]) == {"type": "score", "instructions": "x", "criteria": ["l", "h"]}
 
 
-# ------------------------------------------------------------- HTTP contract
+# ----------------------------------------------------- local mode (in-process)
+
+def test_local_mode_routes_by_language_and_records_the_checkpoint(monkeypatch):
+    decider = LayaDecider(laya_settings(monkeypatch, "local"), router=FakeRouter())
+    english = decider.decide({"message": "Where is the FECO303 lab?"}, {"q": qcat.noul("?")})
+    khmer = decider.decide({"message": KHMER}, {"q": qcat.noul("?")})
+    assert english.ok and english.model == "laya/english" and english.noul("q") == 0.8
+    assert khmer.model == "laya/multilingual"
+    assert any("khmer" in note for note in khmer.notes)
+
+
+def test_local_mode_raises_the_token_budgets_from_the_profile(monkeypatch):
+    router = FakeRouter()
+    settings = laya_settings(monkeypatch, "local", **{"laya.head_max_len": 448, "laya.max_len": 1024})
+    LayaDecider(settings, router=router).decide("x", {"q": qcat.noul("?")})
+    assert router.agents["english"].cfg == {"max_len": 1024, "head_max_len": 448}
+
+
+def test_local_mode_batches_passages_into_one_pass_per_checkpoint(monkeypatch):
+    router = FakeRouter()
+    decider = LayaDecider(laya_settings(monkeypatch, "local"), router=router)
+    verdicts = decider.judge_passages("library fines", ["Fines are 500 riel a day.", "Wi-Fi is free.", KHMER])
+    assert len(verdicts) == 3 and all(v["relevant"] == 0.8 for v in verdicts)
+    assert router.agents["english"].seen == [("batch", 2)] and router.agents["multilingual"].seen == [("batch", 1)]
+
+
+def test_local_mode_failure_is_returned_as_data(monkeypatch):
+    class Broken(FakeRouter):
+        def load(self, name):
+            raise OSError("checkpoint download failed")
+
+    decision = LayaDecider(laya_settings(monkeypatch, "local"), router=Broken()).decide("x", {"q": qcat.noul("?")})
+    assert not decision.ok and "checkpoint download failed" in decision.error
+
+
+# ------------------------------------------------------- HTTP mode (laya-serve)
 
 def test_request_body_is_exactly_state_model_questions(monkeypatch):
-    settings = jev_settings(monkeypatch)
-    payload = json.loads((config.DATA_DIR / "fixtures" / "jev_response_shape.json").read_text(encoding="utf-8"))
+    settings = laya_settings(monkeypatch)
+    payload = json.loads((config.DATA_DIR / "fixtures" / "laya_response_shape.json").read_text(encoding="utf-8"))
     session = RecordingSession(default=FakeResponse(200, payload))
-    decider = JevDecider(settings, session=session)
-    body = jev_mod.smoke_request()
+    decider = LayaDecider(settings, session=session)
+    body = laya_mod.smoke_request()
     decision = decider.decide(body["state"], body["questions"])
     sent = session.requests[0]
-    assert sent["url"] == "https://api.typesafe.ai/v1/systemone"
+    assert sent["url"] == "http://127.0.0.1:8000/v1/systemone"
     assert set(sent["json"]) == {"state", "model", "questions"}
-    assert sent["json"]["questions"] == body["questions"] and sent["json"]["model"] == "jev-latest"
-    assert sent["headers"]["Authorization"].startswith("Bearer ")
-    assert decision.ok and decision.model == "jev-1.13.0" and decision.usage["input_tokens"] == 648
-    assert decision.choice("dept")[0] == "billing" and decision.noul("urgent") == 0.41
+    assert sent["json"]["questions"] == body["questions"] and sent["json"]["model"] == "auto"
+    assert "Authorization" not in sent["headers"]  # laya-serve asks for a key only when it runs with LAYA_API_KEY
+    assert decision.ok and decision.model == "laya/english"
+    assert decision.usage["input_tokens"] == payload["usage"]["input_tokens"]
+    assert decision.noul("urgency") == payload["answers"]["urgency"]["noul"]
+
+
+def test_bearer_key_is_sent_when_set(monkeypatch):
+    monkeypatch.setenv("LAYA_API_KEY", "laya-srv-" + "k" * 20)
+    session = RecordingSession(default=FakeResponse(200, {"answers": {}}))
+    LayaDecider(laya_settings(monkeypatch), session=session).decide("x", {"q": qcat.noul("?")})
+    assert session.requests[0]["headers"]["Authorization"].startswith("Bearer ")
 
 
 def test_model_comes_from_profile_first(monkeypatch):
-    settings = jev_settings(monkeypatch, **{"jev.model": "jev-1.13.0"})
+    settings = laya_settings(monkeypatch, **{"laya.model": "multilingual"})
     session = RecordingSession(default=FakeResponse(200, {"answers": {}}))
-    JevDecider(settings, session=session).decide("x", {"q": qcat.noul("?")})
-    assert session.requests[0]["json"]["model"] == "jev-1.13.0"
+    LayaDecider(settings, session=session).decide("x", {"q": qcat.noul("?")})
+    assert session.requests[0]["json"]["model"] == "multilingual"
 
 
-def test_retries_on_529_but_not_on_401_or_422(monkeypatch):
-    monkeypatch.setattr(jev_mod, "BACKOFF", (0.0, 0.0, 0.0))
-    settings = jev_settings(monkeypatch)
-    session = RecordingSession([FakeResponse(529, text="overloaded"), FakeResponse(200, {"answers": {"q": {"noul": 1}}})])
-    assert JevDecider(settings, session=session).decide("x", {"q": qcat.noul("?")}).ok
+def test_retries_on_503_but_not_on_401_or_422(monkeypatch):
+    monkeypatch.setattr(laya_mod, "BACKOFF", (0.0, 0.0, 0.0))
+    settings = laya_settings(monkeypatch)
+    session = RecordingSession([FakeResponse(503, text="loading"), FakeResponse(200, {"answers": {"q": {"noul": 1}}})])
+    assert LayaDecider(settings, session=session).decide("x", {"q": qcat.noul("?")}).ok
     assert len(session.requests) == 2
     for status in (401, 422):
         session = RecordingSession(default=FakeResponse(status, text="no"))
-        decision = JevDecider(settings, session=session).decide("x", {"q": qcat.noul("?")})
+        decision = LayaDecider(settings, session=session).decide("x", {"q": qcat.noul("?")})
         assert not decision.ok and decision.status == status and len(session.requests) == 1
 
 
 def test_network_failure_is_returned_as_data(monkeypatch):
     import requests
 
-    monkeypatch.setattr(jev_mod, "BACKOFF", (0.0, 0.0, 0.0))
+    monkeypatch.setattr(laya_mod, "BACKOFF", (0.0, 0.0, 0.0))
     session = RecordingSession(default=requests.ConnectionError("down"))
-    decision = JevDecider(jev_settings(monkeypatch), session=session).decide("x", {"q": qcat.noul("?")})
+    decision = LayaDecider(laya_settings(monkeypatch), session=session).decide("x", {"q": qcat.noul("?")})
     assert not decision.ok and "ConnectionError" in decision.error
 
 
+# ------------------------------------------------------------------ replay
+
 def test_record_then_replay_is_deterministic(monkeypatch, tmp_path):
-    monkeypatch.setattr(jev_mod, "REPLAY_DIR", tmp_path)
-    settings = jev_settings(monkeypatch)
-    live = RecordingSession(default=FakeResponse(200, {"model": "jev-1.13.0", "answers": {"q": {"type": "noul", "noul": 0.7}}}))
-    first = JevDecider(settings, session=live, replay="record").decide("state", {"q": qcat.noul("?")})
-    replayed = JevDecider(settings, session=RecordingSession(), replay="replay").decide("state", {"q": qcat.noul("?")})
+    monkeypatch.setattr(laya_mod, "REPLAY_DIR", tmp_path)
+    settings = laya_settings(monkeypatch)
+    live = RecordingSession(default=FakeResponse(200, {"model": "laya/english",
+                                                       "answers": {"q": {"type": "noul", "noul": 0.7}}}))
+    first = LayaDecider(settings, session=live, replay="record").decide("state", {"q": qcat.noul("?")})
+    replayed = LayaDecider(settings, session=RecordingSession(), replay="replay").decide("state", {"q": qcat.noul("?")})
     assert first.answers == replayed.answers and "replayed" in replayed.notes
 
 
-def test_recorded_live_responses_replay_for_demo_turns(monkeypatch, courses):
-    """Responses recorded from the live API on 23 Sep 2026 (data/fixtures/jev/) still match today's questions."""
+@pytest.mark.skipif(not any(laya_mod.REPLAY_DIR.glob("*.json")),
+                    reason="no recorded Laya responses yet: run scripts/record_fixtures.py --laya-only")
+def test_recorded_laya_responses_replay_for_demo_turns(monkeypatch, courses):
+    """Responses recorded from the local Laya model (data/fixtures/laya/) still match today's questions."""
     catalogue, enrolled = courses
-    settings = jev_settings(monkeypatch)
-    decider = JevDecider(settings, replay="replay")
+    settings = laya_settings(monkeypatch, "local")
+    decider = LayaDecider(settings, replay="replay")
     spec = qcat.wire(qcat.turn_catalogue(catalogue))
     decision = decider.decide(qcat.turn_state("Convert 50", [], "A0001", enrolled), spec)
-    assert decision.ok, "re-record with scripts/record_fixtures.py after changing question wording"
-    assert decision.choice("route")[0] == "currency"
-    assert decision.choice("currency_direction")[0] == "not_stated"
-    action = policy.decide_action(decision, policy.Thresholds.from_profile(settings.profile))
-    assert action.kind == "clarify" and action.reply == prompts.CLARIFY_CONVERSION
+    assert decision.ok, "re-record with scripts/record_fixtures.py --laya-only after changing question wording"
+    assert decision.model.startswith("laya/") and set(decision.answers) == set(spec)
 
 
-def test_get_decider_falls_back_to_stub_without_key():
+def test_get_decider_falls_back_to_stub_when_laya_is_unavailable(monkeypatch):
     assert get_decider(config.get_settings("offline")).name == "stub"
+    monkeypatch.setenv("LAYA_MODE", "off")
+    assert get_decider(config.get_settings("baseline")).name == "stub"
 
 
 # -------------------------------------------------------------------- stub

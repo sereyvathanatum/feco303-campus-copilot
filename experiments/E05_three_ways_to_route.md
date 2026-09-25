@@ -3,19 +3,19 @@ id: E05
 title: Three ways to route
 week: 7
 time_box: 45 min
-profiles: [e05_keyword, e05_llm, e05_jev, e05_strict, e05_loose]
+profiles: [e05_keyword, e05_llm, e05_laya, e05_strict, e05_loose]
 ---
 # E05: Three ways to route
 
 ## Goal
-Compare a keyword rule, an LLM router, and the Jev decision model on the same routing cases.
+Compare a keyword rule, an LLM router, and the Laya decision model on the same routing cases.
 
 ## Steps
 1. Run `python -m campus_copilot.cli --profile e05_keyword eval --subset routing` (the 12 `seed-routing` cases).
-2. Repeat with `e05_llm` and `e05_jev`.
+2. Repeat with `e05_llm` and `e05_laya`.
 3. Extend to the full set: `eval` without `--subset` for each router.
 4. Open `runs/eval/` and fill the evidence table; the per-language table is part of every report.
-5. Rerun the Jev router with `e05_strict` and `e05_loose` for the threshold question.
+5. Rerun the Laya router with `e05_strict` and `e05_loose` for the threshold question.
 
 ## Evidence
 | Router | Accuracy (en / km / km-latn) | p50 ms | Cost per 100 turns | Malformed outputs |

@@ -9,7 +9,7 @@ Start: `python -m campus_copilot.cli --profile offline ui` and open http://127.0
 |---|---|---|---|
 | 1 | Server address | listens on 127.0.0.1 only; no share link unless `--share` | 127.0.0.1:7861 only (netstat); HTTP 200 |
 | 2 | Header | step label, profile, run mode, chat provider chain | shown |
-| 3 | Demo turn 1 | cited answer `[campus-handbook p.4]`; Decisions tab shows bars and a `STUB` badge | covered by `test_chat_turn_fills_every_panel` |
+| 3 | Demo turn 1 | cited answer `[academic-info § IV. Tuition Fees › ...]`; Decisions tab shows bars and a `STUB` badge | covered by `test_chat_turn_fills_every_panel` |
 | 4 | Demo turns 1-14 in order | the same results as `cli demo` (13/14 before the vision step is built) | via the shared `Copilot`; `send` driven over HTTP with `gradio_client` |
 | 5 | Sources tab | chunks with `source_id` and page, scores, judge verdicts; original and rewritten query on turn 2 | shown |
 | 6 | Tools tab | calls, arguments, results, attribution | shown |

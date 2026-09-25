@@ -1,7 +1,7 @@
 """Rule-based stub decider, labelled `STUB` (docs/implementation-plan.md §8.3).
 
 A keyword router plus simple regexes over English, romanized Khmer, and Khmer
-script. It answers the same questions in the same wire shape as Jev, so the graph
+script. It answers the same questions in the same wire shape as Laya, so the graph
 cannot tell them apart. A matched option gets probability 0.9 and the rest share
 what is left; with no match the spread is flat. It doubles as the "rule" baseline
 in E05, including its known weaknesses (paraphrases, keyword false positives).

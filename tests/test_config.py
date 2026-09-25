@@ -7,16 +7,16 @@ from campus_copilot import config
 
 def test_placeholder_keys_count_as_missing(monkeypatch):
     monkeypatch.setenv("NVIDIA_API_KEY", "nvapi-replace-with-a-real-key")
-    monkeypatch.setenv("TYPESAFE_API_KEY", "typesafe-replace-with-a-real-key")
+    monkeypatch.setenv("LAYA_MODE", "sideways")
     settings = config.get_settings("baseline")
     assert settings.run_mode == "offline"
-    assert len(settings.notes) == 2
+    assert len(settings.notes) == 2  # the NVIDIA placeholder and the unknown LAYA_MODE
 
 
 def test_run_modes(monkeypatch):
     monkeypatch.setenv("NVIDIA_API_KEY", "nvapi-" + "x" * 30)
     assert config.get_settings("baseline").run_mode == "nim"
-    monkeypatch.setenv("TYPESAFE_API_KEY", "ts-" + "y" * 30)
+    monkeypatch.setenv("LAYA_MODE", "http")
     assert config.get_settings("baseline").run_mode == "full"
     assert config.get_settings("offline").run_mode == "offline"
 
@@ -26,12 +26,12 @@ def test_unedited_env_copy_reports_offline(tmp_path, monkeypatch):
     env.write_text((config.REPO_ROOT / ".env.example").read_text(encoding="utf-8"), encoding="utf-8")
     monkeypatch.setenv("COPILOT_ENV_FILE", str(env))
     monkeypatch.delenv("NVIDIA_API_KEY", raising=False)
-    monkeypatch.delenv("TYPESAFE_API_KEY", raising=False)
+    monkeypatch.delenv("LAYA_API_KEY", raising=False)
     settings = config.get_settings("baseline")
     assert settings.env_file == env
     assert settings.run_mode == "offline"
     os.environ.pop("NVIDIA_API_KEY", None)
-    os.environ.pop("TYPESAFE_API_KEY", None)
+    os.environ.pop("LAYA_API_KEY", None)
 
 
 def test_environment_wins_over_env_file(tmp_path, monkeypatch):

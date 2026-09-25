@@ -60,7 +60,7 @@ def model_window(history: list[BaseMessage], settings, system: str | None = None
     return Window(body_kept, len(dropped), count_tokens(dropped, settings), count_tokens(kept, settings))
 
 
-def jev_history(history: list[BaseMessage], turns: int = 3) -> list[dict]:
+def laya_history(history: list[BaseMessage], turns: int = 3) -> list[dict]:
     """The decision model's own short slice: the last three turns, as plain text."""
     out = []
     for m in history[-2 * turns:]:

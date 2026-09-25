@@ -7,7 +7,7 @@
   - `native`: provider tool calling (`tools` in the chat request);
   - `json`: a model-agnostic JSON protocol, one object per step, parsed tolerantly;
     the tool name is checked against the registry before anything runs;
-  - `jev_dispatch`: the decision model picks the next tool (a Choice), code fills the
+  - `laya_dispatch`: the decision model picks the next tool (a Choice), code fills the
     arguments, and the language model writes only the final answer.
 """
 
@@ -54,8 +54,8 @@ def next_step(rt, state: dict, observations: list[dict], candidates: list[dict],
             call = reply.tool_calls[0]
             return Step("call_tool", call["tool"], call.get("args") or {}, reason="native tool call", reply=reply)
         return Step("final", answer=reply.text, reason="native final answer", reply=reply)
-    if mode == "jev_dispatch":
-        return _jev_dispatch(rt, state, observations, candidates, specs, history)
+    if mode == "laya_dispatch":
+        return _laya_dispatch(rt, state, observations, candidates, specs, history)
     data, reply = rt.llm.agent_step(message, [s.json_protocol() for s in specs], observations, candidates, history)
     if not isinstance(data, dict) or data.get("action") not in {"call_tool", "final"}:
         return Step("stop", reason="malformed JSON decision from the model", reply=reply)
@@ -64,7 +64,7 @@ def next_step(rt, state: dict, observations: list[dict], candidates: list[dict],
     return Step("call_tool", str(data.get("tool")), data.get("args") or {}, reason="JSON protocol call", reply=reply)
 
 
-def _jev_dispatch(rt, state: dict, observations: list[dict], candidates: list[dict], specs, history) -> Step:
+def _laya_dispatch(rt, state: dict, observations: list[dict], candidates: list[dict], specs, history) -> Step:
     done = {o["tool"] for o in observations}
     options = {s.name: s.description for s in specs if s.name not in done and not s.write}
     options["final_answer"] = "The observations already answer the message; no further tool is needed."

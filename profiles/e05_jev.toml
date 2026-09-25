@@ -1,7 +1,0 @@
-# E05: the Jev decision model, pinned version.
-
-[router]
-kind = "jev"
-
-[jev]
-model = "jev-1.13.0"

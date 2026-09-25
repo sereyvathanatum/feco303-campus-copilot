@@ -8,14 +8,15 @@ from .conftest import artifact, ingest, step_settings
 pytestmark = pytest.mark.step02
 
 
-def test_page_count_khmer_flag_and_frontmatter(pack_sources):
+def test_page_count_image_pages_flagged_and_markdown_unit(pack_sources):
     state = ingest(step_settings(2, [pack_sources]))
     units = artifact(state, "extract")
-    handbook = [u for u in units if u["source_id"] == "campus-handbook"]
-    assert len(handbook) == len(PdfReader(str(pack_sources / "campus-handbook.pdf")).pages)
-    assert [u["page"] for u in handbook] == list(range(1, len(handbook) + 1))
-    khmer = [u for u in handbook if u["script"] == "khmer"]
-    assert khmer and all(any("Khmer" in f for f in u["flags"]) for u in khmer)
-    faq = [u for u in units if u["source_id"] == "campus-services-faq"][0]
-    assert faq["metadata"]["title"] == "Campus services FAQ" and faq["metadata"]["language"] == "en"
-    assert not faq["text"].startswith("---")
+    prospectus = [u for u in units if u["source_id"] == "camtech-prospectus"]
+    assert len(prospectus) == len(PdfReader(str(pack_sources / "CamTech-Prospectus.pdf")).pages)
+    assert [u["page"] for u in prospectus] == list(range(1, len(prospectus) + 1))
+    # the prospectus is a designed brochure: several pages carry an image and no text layer
+    empty = [u for u in prospectus if not u["text"].strip()]
+    assert empty and all(any("empty or near-empty page" in f for f in u["flags"]) for u in empty)
+    info = [u for u in units if u["source_id"] == "academic-info"]
+    assert len(info) == 1 and info[0]["page"] is None  # one Markdown file, no page numbers
+    assert not info[0]["text"].startswith("---")

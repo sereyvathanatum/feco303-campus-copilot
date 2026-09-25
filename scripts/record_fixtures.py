@@ -1,10 +1,11 @@
-"""Record live API responses into data/api_fixtures/ (and, with --jev, decision-model responses).
+"""Record live API responses into data/api_fixtures/ (and, with --laya, decision-model responses).
 
 Maintenance only; needs network access. Fixture files are keyed the same way the
 tools look them up, so offline runs replay exactly what was recorded here.
 
     python scripts/record_fixtures.py            # public APIs
-    python scripts/record_fixtures.py --jev      # also Jev turn decisions for demo turns and eval cases
+    python scripts/record_fixtures.py --laya     # also Laya turn decisions for demo turns and eval cases
+    python scripts/record_fixtures.py --laya-only  # Laya decisions only
 """
 
 from __future__ import annotations
@@ -60,14 +61,14 @@ def record_public_apis(settings) -> None:
         save("wikipedia", {"title": slug}, url, http.get_json("wikipedia", url).data)
 
 
-def record_jev(settings) -> None:
+def record_laya(settings) -> None:
     from campus_copilot.decisions import questions as qcat
-    from campus_copilot.decisions.jev import JevDecider
+    from campus_copilot.decisions.laya import LayaDecider
     from campus_copilot.db import connection, queries
 
     conn = connection.read_connection()
     catalogue = qcat.turn_catalogue(queries.course_codes(conn))
-    decider = JevDecider(settings, replay="record")
+    decider = LayaDecider(settings, replay="record")
     spec = qcat.wire(catalogue)
     cases = []
     for path in (ROOT / "data" / "demo_turns.jsonl", ROOT / "eval" / "cases.jsonl"):
@@ -79,17 +80,18 @@ def record_jev(settings) -> None:
         state = qcat.turn_state(case["message"], history, account, queries.enrolled_courses(conn, account),
                                 case.get("image_text"))
         decision = decider.decide(state, spec)
-        print(f"jev {'ok ' if decision.ok else 'ERR'} {decision.ms:5.0f} ms  {case['message'][:60]}")
+        print(f"laya {'ok ' if decision.ok else 'ERR'} {decision.ms:5.0f} ms  {decision.model:<18} {case['message'][:60]}")
 
 
 def main() -> int:
     settings = config.get_settings("baseline")
-    record_public_apis(settings)
-    if "--jev" in sys.argv:
-        if not settings.has_jev:
-            print("TYPESAFE_API_KEY missing: Jev responses not recorded")
+    if "--laya-only" not in sys.argv:
+        record_public_apis(settings)
+    if "--laya" in sys.argv or "--laya-only" in sys.argv:
+        if not settings.has_laya:
+            print("Laya unavailable (pip install laya, or LAYA_MODE=http with laya-serve): responses not recorded")
             return 1
-        record_jev(settings)
+        record_laya(settings)
     return 0
 
 

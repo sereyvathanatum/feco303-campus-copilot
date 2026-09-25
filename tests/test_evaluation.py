@@ -42,12 +42,12 @@ def test_spans_are_written_redacted(runs_dir):
 # ------------------------------------------------------------------- costs
 
 def test_unknown_prices_stay_unknown():
-    spans = [{"span": "guard_and_route", "decider": "jev", "tokens_in": 2000, "tokens_out": 600, "decider_calls": 1},
+    spans = [{"span": "guard_and_route", "decider": "laya", "tokens_in": 2000, "tokens_out": 600, "decider_calls": 1},
              {"span": "rag_answer", "model": "google:gemma-4-31b-it", "tokens_in": 900, "tokens_out": 80, "llm_calls": 1}]
     usage = usage_by_provider(spans)
     known, unknown, per = cost(usage, config.load_profile("baseline").get("prices"))
     assert per["google"] == "unknown" and unknown == 1
-    assert abs(known - 2000 / 1e6 * 0.042) < 1e-12
+    assert known == 0.0 and per["laya"] == 0.0  # open weights on the local machine: no per-token price
 
 
 def test_trace_report_after_a_demo(pack_env):
