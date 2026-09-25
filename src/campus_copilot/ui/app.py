@@ -371,7 +371,7 @@ def build_app(profile: str | None = None):
                 verify = gr.Dataframe(verify_table(), headers=["probe", "source", "page or section", "result", "top-k"],
                                       label="Verify: probe hit@k")
             with gr.Tab("Retrieval Lab"):
-                query = gr.Textbox(label="Query", value="What is the penalty for late assignments?")
+                query = gr.Textbox(label="Query", value="What is the yearly tuition fee for Cyber Security?")
                 with gr.Row():
                     modes = gr.CheckboxGroup(list(MODES), value=["lexical", "dense", "hybrid"], label="Retrieval modes")
                     stores = gr.CheckboxGroup(["sqlite", "sqlite_vec", "chroma"], value=["sqlite", "sqlite_vec"],

@@ -23,11 +23,11 @@ Running headers and footers, page numbers, hyphenated line breaks, Unicode NFC, 
 
 ## Run it
 1. `python -m campus_copilot.cli ingest --until chunk`
-2. `python -m campus_copilot.cli ingest --show clean --doc campus-handbook`
-3. `python -m campus_copilot.cli ingest --show chunk --doc campus-services-faq`
+2. `python -m campus_copilot.cli ingest --show clean --doc academic-info`
+3. `python -m campus_copilot.cli ingest --show chunk --doc academic-info`
 
 ## What to observe
-The running header and the page numbers are gone from the cleaned text, and the word broken across a line on the lab-attendance page is joined again. Markdown chunks carry paths such as `Library › How is a loan renewed?`. The chunk report lists the token spread per language: Khmer text needs far more tokens per character than English, which is why chunks are sized in tokens.
+The `<!-- image -->` markers the PDF-to-Markdown converter left behind are gone from the cleaned text, and so is the stray page number in the prospectus. Markdown chunks carry heading paths such as `IV. Tuition Fees › A) Bachelor's Degree`, and a table split across chunks repeats its header row in every piece, so a row such as `Cyber Security | $1,350 | ...` still says which column is which. The chunk report lists the token spread per language: Khmer text needs far more tokens per character than English, which is why chunks are sized in tokens.
 
 ## Checkpoint
 `python -m campus_copilot.cli step 3 --check` runs `tests/steps/test_step_03.py`. Read its output for the numbers; this chapter

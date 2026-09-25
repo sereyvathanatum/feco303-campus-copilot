@@ -107,10 +107,10 @@ def test_store_implements_vectorstore_interface(pack_env):
 
 @pytest.mark.parametrize("mode", [m for m in MODES if m != "dense+judge"])
 def test_every_mode_returns_labelled_results(pack_env, mode):
-    result = retrieve("What is the penalty for late assignments?", offline(), mode=mode, k=3)
+    result = retrieve("What is the administration fee for the undergraduate program?", offline(), mode=mode, k=3)
     assert result.mode == mode and result.latency_ms >= 0
     assert result.chunks and all(c.score_type for c in result.chunks)
-    assert any(c.source_id == "campus-handbook" and c.page == 6 for c in result.chunks)
+    assert any(c.source_id == "academic-info" for c in result.chunks)
 
 
 def test_offline_rerank_uses_the_local_heuristic_and_orders_best_first(pack_env):
@@ -172,8 +172,10 @@ def test_passages_carry_rank_and_relevance_into_the_prompt(pack_env):
 
 
 def test_lexical_matches_codes_and_numbers(pack_env):
-    result = retrieve("extension 999", offline(), mode="lexical", k=3)
-    assert {(c.source_id, c.page) for c in result.chunks[:2]} == {("campus-handbook", 18), ("campus-handbook", 19)}
+    """Exact tokens a dense encoder blurs: a test score and a fee, matched verbatim by bm25."""
+    result = retrieve("IELTS 5.5 TOEFL 68", offline(), mode="lexical", k=3)
+    assert all(c.source_id == "academic-info" for c in result.chunks)
+    assert "Admission Criteria" in (result.chunks[0].section or "")
 
 
 # -------------------------------------------------------------- model client
@@ -228,9 +230,9 @@ def test_parse_json_object_is_tolerant():
 def test_stub_answers_turn_one_and_abstains_on_turn_three(pack_env):
     settings = offline()
     llm = LLM([StubClient()], settings)
-    q1 = "What happens after more than three missed lab sessions?"
+    q1 = "What is the yearly tuition fee for Cyber Security?"
     a1 = answer(q1, retrieve(q1, settings).chunks, llm)
-    assert not a1.grounded.abstained and "[campus-handbook p.4]" in a1.text
+    assert not a1.grounded.abstained and "[academic-info" in a1.text
     q3 = "What is the cafeteria menu on Friday?"
     a3 = answer(q3, retrieve(q3, settings).chunks, llm)
     assert a3.grounded.abstained and a3.text == ABSTAIN_TEXT
@@ -241,13 +243,13 @@ def test_unknown_citations_are_dropped():
         def complete(self, messages, **kw):
             reply = super().complete(messages, **kw)
             reply.text = ('{"answer": "Fines are 500 riel.", "citations": [{"source_id": "made-up", "page": 9}, '
-                          '{"source_id": "campus-handbook", "page": 11}], "abstained": false}')
+                          '{"source_id": "camtech-prospectus", "page": 11}], "abstained": false}')
             return reply
 
     llm = LLM([Canned()], offline())
-    passages = [{"source_id": "campus-handbook", "page": 11, "section": None, "text": "500 riel per day"}]
+    passages = [{"source_id": "camtech-prospectus", "page": 11, "section": None, "text": "500 riel per day"}]
     grounded, reply = llm.grounded_answer("fine?", passages)
-    assert [c.source_id for c in grounded.citations] == ["campus-handbook"]
+    assert [c.source_id for c in grounded.citations] == ["camtech-prospectus"]
     assert any("made-up" in n for n in reply.notes)
 
 

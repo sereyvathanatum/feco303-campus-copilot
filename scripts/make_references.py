@@ -122,7 +122,7 @@ def main() -> int:
 
     fresh("e03")
     tables = [compare(q, settings("baseline"), k=3).markdown() for q in
-              ("What is the penalty for late assignments?", "What is the cafeteria menu on Friday?",
+              ("What is the yearly tuition fee for Cyber Security?", "What is the cafeteria menu on Friday?",
                "តើអាចខ្ចីសៀវភៅបានប៉ុន្មានក្បាល?")]
     (OUT / "E03.md").write_text(header("E03", "retrieval pipelines, vector stores, and abstention", mode) +
                                 "\n\n".join(tables) + "\n", encoding="utf-8")

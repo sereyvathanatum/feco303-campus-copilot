@@ -189,7 +189,7 @@ def _long_context(query: str, settings, conn, started: float) -> RetrievalResult
     own = conn is None
     conn = conn or kb.connect()
     try:
-        source = settings.profile.get("rag.long_context_source", "campus-handbook")
+        source = settings.profile.get("rag.long_context_source", "academic-info")
         rows = conn.execute("SELECT chunk_id, source_id, page, section, text, token_count, language FROM chunks "
                             "WHERE source_id = ? ORDER BY page, position", (source,)).fetchall()
         chunks = [_scored(dict(r), 1.0, "whole document in context", "none") for r in rows]

@@ -81,5 +81,5 @@ def test_mcp_schemas_match_the_registry(transports):
 def test_documents_are_resources(transports):
     _, remote = transports
     uris = [r["uri"] for r in remote.list_resources()]
-    assert "campus://documents/campus-handbook" in uris
-    assert "[p.4]" in remote.read_resource("campus://documents/campus-handbook")
+    assert "campus://documents/camtech-prospectus" in uris
+    assert "[p.18]" in remote.read_resource("campus://documents/camtech-prospectus")

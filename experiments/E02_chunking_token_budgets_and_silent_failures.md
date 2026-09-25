@@ -17,8 +17,8 @@ PowerShell `$env:COPILOT_RUNS_DIR = "runs/e02-small"`; bash `export COPILOT_RUNS
 3. For each, read the chunk report: `python -m campus_copilot.cli --profile e02_chars ingest --show chunk` and the `token_spread` in `runs/.../ingest/<run>/run.json` (English vs Khmer).
 4. With `e02_window256`, open the `over_window` list: every chunk longer than 256 tokens and the text a truncating embedder would drop.
 5. In `nim` mode, ingest with `e02_swap`; compare `python -m campus_copilot.cli --profile e02_swap ingest --show verify` hit@3 with the baseline. No error appears.
-6. Retrieval Lab (UI) or `python -m campus_copilot.cli retrieve "What is the fine for an overdue library book?" --compare` for 5 questions per setting.
-7. Inspect the Khmer handbook page: `ingest --show extract --doc campus-handbook` (page 20) and its extraction flags.
+6. Retrieval Lab (UI) or `python -m campus_copilot.cli retrieve "What is the yearly tuition fee for Cyber Security?" --compare` for 5 questions per setting.
+7. Inspect the image-only prospectus pages: `ingest --show extract --doc camtech-prospectus` and their extraction flags; note which questions those pages could have answered.
 
 ## Evidence
 | Setting | Chunks | Tokens per chunk (en / km, median) | Chunks over window | Probe hit@3 | Top-3 for 5 questions |

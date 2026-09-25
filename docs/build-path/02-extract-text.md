@@ -21,10 +21,10 @@ PDF text layers, 1-based page numbers for citations, YAML frontmatter, script de
 
 ## Run it
 1. `python -m campus_copilot.cli ingest --until extract`
-2. `python -m campus_copilot.cli ingest --until extract --show extract --doc campus-handbook`
+2. `python -m campus_copilot.cli ingest --until extract --show extract --doc camtech-prospectus`
 
 ## What to observe
-The handbook yields one record per page. The Khmer page is flagged: its glyphs come out of the PDF in the wrong order, which is why Markdown stays the source of truth for Khmer text. Markdown frontmatter (`source_id`, `title`, `language`, `licence`) becomes metadata and leaves the body.
+The prospectus yields one record per page. It is a designed brochure, so several pages are a photograph with no text layer: those come out empty and are flagged, because a scanned or image-only page needs OCR, which is out of scope here. Where the text layer exists, extraction keeps its flaws (`Cam Tech`, stray symbols such as `~`), and those flaws reach the chunks. The Markdown file (`Academic_Info.md`) is one record with no page numbers; its structure lives in the headings. Metadata comes from `data/sources/manifest.csv`, or from YAML frontmatter when a Markdown file has one.
 
 ## Checkpoint
 `python -m campus_copilot.cli step 2 --check` runs `tests/steps/test_step_02.py`. Read its output for the numbers; this chapter

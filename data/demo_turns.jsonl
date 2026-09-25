@@ -1,5 +1,5 @@
-{"turn": 1, "message": "What happens after more than three missed lab sessions?", "first_step": 5, "concept": "RAG, page-level citations", "expect": {"kind": "answer", "cites": ["campus-handbook", 4]}}
-{"turn": 2, "message": "And for late assignments?", "first_step": 6, "concept": "follow-up rewriting before retrieval", "expect": {"kind": "answer", "rewrite_contains": "late assignments", "cites": ["campus-handbook", 6]}}
+{"turn": 1, "message": "What is the yearly tuition fee for Cyber Security?", "first_step": 5, "concept": "RAG, citations to the source document", "expect": {"kind": "answer", "cites": ["academic-info", null]}}
+{"turn": 2, "message": "And for a master's degree?", "first_step": 6, "concept": "follow-up rewriting before retrieval", "expect": {"kind": "answer", "rewrite_contains": "master's degree", "cites": ["academic-info", null]}}
 {"turn": 3, "message": "What is the cafeteria menu on Friday?", "first_step": 5, "concept": "retrieved is not relevant", "expect": {"kind": "abstain"}}
 {"turn": 4, "message": "When and where is the FECO303 lab this week?", "first_step": 8, "concept": "DB tool, argument filling", "expect": {"kind": "tool", "tool": "get_timetable", "contains": "C-301"}}
 {"turn": 5, "message": "Is ISBN 9780262046305 on the shelf?", "first_step": 8, "concept": "connector pattern", "expect": {"kind": "tool", "tool": "check_book", "contains": "on the shelf"}}
