@@ -7,7 +7,12 @@ and recorded API fixtures; every demo turn and every test still runs.
 |---|---|---|
 | `offline` | none | nothing; stubs and fixtures |
 | `nim` | `NVIDIA_API_KEY` and/or `GEMINI_API_KEY` | chat and vision model, NIM embeddings; stub decider |
-| `full` | the above + `TYPESAFE_API_KEY` | everything, with public APIs live or cached |
+| `full` | the above + the `laya` package installed | everything, with public APIs live or cached |
+
+The decision model needs no key. `pip install laya` puts Laya in the process (`LAYA_MODE=local`, the
+default) and the checkpoints download from Hugging Face on first use; `pip install "laya[serve]"` plus a
+running `laya-serve` answers over HTTP instead (`LAYA_MODE=http`, `LAYA_BASE_URL`). `LAYA_MODE=off` keeps
+the stub decider.
 
 `python -m campus_copilot.cli check` prints the mode, the `.env` file found, each key's state (set, missing,
 or placeholder, never the value), the model IDs, and a reachability probe per service.
@@ -25,7 +30,8 @@ or placeholder, never the value), the model IDs, and a reachability probe per se
 | `NVIDIA_NEMOTRON_API_KEY` | optional second NIM key | NIM small model, embeddings, reranker; falls back to `NVIDIA_API_KEY` |
 | `GEMINI_API_KEY` | https://aistudio.google.com/apikey (free tier) | Gemma 4 through Google AI Studio |
 | `COPILOT_CHAT_PROVIDER` | `nim` (default) or `google` | which chat provider goes first; the other is the fallback |
-| `TYPESAFE_API_KEY` | https://console.typesafe.ai/keys | the Jev decision model |
+| `LAYA_MODE` | `local` (default), `http`, or `off` | where the Laya decision model runs |
+| `LAYA_API_KEY` | only when `laya-serve` runs behind a bearer token | the `Authorization` header sent in `http` mode |
 | `HF_TOKEN` | https://huggingface.co/settings/tokens | optional: published tokenizers for chunk sizing |
 
 ## Provider fallback

@@ -16,6 +16,7 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.types import Command
 
 from .. import config
+from ..observability.node_debug import NodeDebugger, NullDebugger, enabled_from_env
 from ..schemas import TurnResult
 from .nodes import Nodes, Runtime, new_trace_id
 from .state import CopilotState
@@ -118,6 +119,8 @@ class Copilot:
         self.checkpointer = SqliteSaver(self._conn)
         self.checkpointer.setup()
         self.graph = build_graph(self.rt, self.checkpointer)
+        if enabled_from_env():
+            self.debug_nodes(True)
 
     @property
     def caps(self):
@@ -128,6 +131,32 @@ class Copilot:
             return uuid.uuid4().hex[:10]  # without memory every turn starts a fresh thread
         return thread_id
 
+    def debug_nodes(self, on: bool = True, full: bool = False) -> None:
+        """Print every node's input, sub-steps, and output while a turn runs (observability/node_debug.py)."""
+        self.rt.debug = NodeDebugger(full=full) if on else NullDebugger()
+
+    def _run(self, graph_input, cfg: dict, message: str, trace_id: str, thread: str, resume: bool = False) -> None:
+        debugger = self.rt.debug
+        if not debugger:
+            self.graph.invoke(graph_input, cfg)
+            return
+        debugger.start(message, trace_id, thread, tracer=self.rt.tracer(trace_id), resume=resume)
+        debugger.snapshot(dict(self.graph.get_state(cfg).values))
+        try:
+            # "values" gives the whole state after each node (what the next node reads);
+            # "updates" gives exactly what each node returned.
+            for mode, chunk in self.graph.stream(graph_input, cfg, stream_mode=["updates", "values"]):
+                if mode == "values":
+                    debugger.snapshot(chunk)
+                    continue
+                for node, update in chunk.items():
+                    if node == "__interrupt__":
+                        debugger.interrupted([getattr(i, "value", i) for i in update])
+                    else:
+                        debugger.node_done(node, update)
+        finally:
+            debugger.finish()
+
     def ask(self, message: str, thread_id: str | None = None, account_id: str | None = None,
             image_path: str | None = None) -> TurnResult:
         thread = self._thread(thread_id)
@@ -137,7 +166,7 @@ class Copilot:
                    "image_path": image_path if self.caps.vision else None, "trace_id": trace_id}
         cfg = {"configurable": {"thread_id": thread}}
         with self.rt.tracer(trace_id).span("turn", thread_id=thread, message=message[:200]):
-            self.graph.invoke(payload, cfg)
+            self._run(payload, cfg, message, trace_id, thread)
         return self._result(thread, trace_id)
 
     def resume(self, thread_id: str, confirm: bool) -> TurnResult:
@@ -147,7 +176,8 @@ class Copilot:
             return TurnResult(kind="error", answer="No pending action in this thread.", thread_id=thread_id)
         trace_id = state.values.get("trace_id") or new_trace_id()
         with self.rt.tracer(trace_id).span("resume", confirm=confirm):
-            self.graph.invoke(Command(resume={"confirm": confirm}), cfg)
+            self._run(Command(resume={"confirm": confirm}), cfg, f"(confirm={confirm})", trace_id, thread_id,
+                      resume=True)
         return self._result(thread_id, trace_id)
 
     def pending(self, thread_id: str) -> dict | None:

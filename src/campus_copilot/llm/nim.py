@@ -46,6 +46,7 @@ class LLMReply:
     tool_calls: list[dict] = field(default_factory=list)
     thought_chars: int = 0
     notes: list[str] = field(default_factory=list)
+    prompt: list[dict] = field(default_factory=list)  # the messages sent, for the node debugger
 
 
 def strip_thoughts(text: str) -> tuple[str, int]:

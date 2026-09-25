@@ -1,7 +1,9 @@
 # Optional extras. Core code never imports these packages.
+# `laya` is the exception in spirit: without it the decision model falls back to the
+# stub decider (`LAYA_MODE=off` has the same effect), and everything else still runs.
+laya
+# laya[serve]   # instead of the line above, to run `laya-serve` and set LAYA_MODE=http
 chromadb
 langchain-chroma
-typesafe-sdk==0.7.1
-langchain-typesafe==0.0.1a3
 ragas
 langsmith

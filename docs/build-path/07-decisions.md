@@ -18,14 +18,14 @@ Choice, Noul, and Score answers; confidence bands; one request per turn for guar
 | File | Role |
 |---|---|
 | `decisions/questions.py` | the catalogue of every judgment in the system |
-| `decisions/jev.py` | the HTTP client for Jev (`POST /v1/systemone`) |
+| `decisions/laya.py` | the Laya client: the `laya` package in-process, or `POST /v1/systemone` against `laya-serve` |
 | `decisions/stub.py` | the keyword-and-regex stub decider (offline, labelled STUB) |
 | `decisions/policy.py` | pure functions from a decision to an action |
 | `graph/nodes.py` | `guard_and_route`, `apply_policy`, and the fixed replies |
 
 ## Run it
 1. `python -m campus_copilot.cli decide "Convert 50"`
-2. `python -m campus_copilot.cli jev-smoke`
+2. `python -m campus_copilot.cli laya-smoke`
 3. `python -m campus_copilot.cli step 7 --demo`
 
 ## What to observe

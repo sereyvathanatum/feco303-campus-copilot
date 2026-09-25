@@ -11,7 +11,7 @@ profiles: [baseline]
 Read Choice, Noul, and Score answers, and see why a Noul of 0.5 is not 'medium'.
 
 ## Steps
-1. Run `python -m campus_copilot.cli jev-smoke` and compare the reply with the reference shape in `docs/jev_primer.md`.
+1. Run `python -m campus_copilot.cli laya-smoke` and compare the reply with the reference shape in `docs/laya_primer.md`.
 2. Run `python -m campus_copilot.cli decide "MESSAGE"` for 8 messages: the 14 demo turns are a good source, plus two of the Khmer ones.
 3. Reproduce the `missing_info` comparison of docs/implementation-plan.md §8.3: change its wording in `decisions/questions.py` to the generic and the conversion-specific versions and record the Noul for 'Convert 50' and for complete requests.
 4. Offline, `decide --decider keyword` shows the stub's answers for the same messages.

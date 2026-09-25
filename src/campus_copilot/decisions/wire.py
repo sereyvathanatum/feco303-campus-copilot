@@ -1,4 +1,4 @@
-"""Question builders that emit the exact TypeSafe wire format (docs/implementation-plan.md §8.3)."""
+"""Question builders that emit the System One wire format Laya reads (docs/implementation-plan.md §8.3)."""
 
 from __future__ import annotations
 

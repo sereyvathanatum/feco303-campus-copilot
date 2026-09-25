@@ -112,6 +112,17 @@ def cmd_retrieve(args) -> int:
     from .rag.retrieve import retrieve
 
     result = retrieve(args.query, settings, mode=args.mode, store=args.store, k=args.k)
+    if args.stages:
+        from .graph.nodes import _chunk_line
+
+        print("what the search runs against (rag/retrieve.py · _setup)")
+        for key, value in result.setup.items():
+            print(f"  {key:<24} {value}")
+        for stage, rows in result.stages.items():
+            print(f"\n{stage} - {len(rows)} chunks")
+            for row in rows:
+                print("  " + _chunk_line(row, full=args.full).replace("\n", "\n  "))
+        print()
     print(f"mode {result.mode} @ {result.store}; {result.candidates} candidates -> {len(result.chunks)} kept; "
           f"{result.latency_ms:.0f} ms; notes: {'; '.join(result.notes) or '-'}")
     for c in result.chunks:
@@ -207,22 +218,25 @@ def cmd_decide(args) -> int:
     return 0
 
 
-def cmd_jev_smoke(args) -> int:
-    from .decisions.jev import smoke
+def cmd_laya_smoke(args) -> int:
+    from .decisions.laya import smoke
 
     settings = _settings(args)
-    if not settings.has_jev:
-        print("TYPESAFE_API_KEY is missing or a placeholder; set it in .env to call Jev.")
+    if not settings.has_laya:
+        print("Laya is unavailable: install it with `pip install laya` (LAYA_MODE=local), start `laya-serve` "
+              "and set LAYA_MODE=http, or check that LAYA_MODE is not off.")
         return 1
     decision, info = smoke(settings)
     if not decision.ok:
-        print(f"Jev request failed: HTTP {decision.status}: {decision.error}")
+        print(f"Laya request failed: {decision.status or ''} {decision.error}".replace("  ", " "))
         return 1
     urgency = decision.noul("urgency")
     print(f"noul (urgency): {urgency:.2f}")
     print(f"model: {decision.model}")
+    for note in decision.notes:
+        print(f"note: {note}")
     print(f"usage: {decision.usage}")
-    print(f"latency: {info['ms']:.0f} ms")
+    print(f"latency: {info['ms']:.0f} ms (the first call also loads the checkpoint)")
     return 0
 
 
@@ -270,6 +284,8 @@ def _confirm_loop(copilot, result):
 
 def cmd_ask(args) -> int:
     copilot = _copilot(args)
+    if args.debug_nodes:
+        copilot.debug_nodes(True, full=args.full)
     try:
         result = copilot.ask(args.message, thread_id=args.thread, account_id=args.account, image_path=args.image)
         _print_turn(result, copilot, show_chunks=args.show_chunks, full=args.full)
@@ -293,9 +309,11 @@ def _chat(copilot, args) -> int:
     print(f"{step_label(copilot.settings.profile)} | mode {copilot.settings.run_mode} | account {account} | "
           f"thread {thread}")
     print("Commands: /thread (new thread), /trace (last trace), /chunks (toggle the retrieved-chunk view), "
-          "/verbose (toggle step logs), /profile NAME, /quit")
+          "/nodes (toggle the node-by-node debug view), /verbose (toggle step logs), /profile NAME, /quit")
     last = None
     show_chunks, full = bool(getattr(args, "show_chunks", False)), bool(getattr(args, "full", False))
+    debug_nodes = bool(getattr(args, "debug_nodes", False)) or bool(copilot.rt.debug)
+    copilot.debug_nodes(debug_nodes, full=full)
     while True:
         try:
             message = input("> ").strip()
@@ -316,6 +334,11 @@ def _chat(copilot, args) -> int:
             if show_chunks and last is not None:
                 _print_chunks(last, full)
             continue
+        if message == "/nodes":
+            debug_nodes = not debug_nodes
+            copilot.debug_nodes(debug_nodes, full=full)
+            print(f"node debug view {'on' if debug_nodes else 'off'}")
+            continue
         if message == "/verbose":
             import logging
 
@@ -334,6 +357,7 @@ def _chat(copilot, args) -> int:
             from .graph.build import Copilot
 
             copilot = Copilot(config.get_settings(name))
+            copilot.debug_nodes(debug_nodes, full=full)
             print(f"profile {name}")
             continue
         last = copilot.ask(message, thread_id=thread, account_id=account)
@@ -459,7 +483,12 @@ def _chunk_flags(p: argparse.ArgumentParser) -> None:
     _log_flags(p)
     p.add_argument("--show-chunks", action="store_true",
                    help="after each answer, list the retrieved chunks: rank, scores, and whether they reached the model")
-    p.add_argument("--full", action="store_true", help="with --show-chunks: print each chunk's full text")
+    p.add_argument("--full", action="store_true",
+                   help="with --show-chunks or --debug-nodes: print full texts instead of shortened ones")
+    p.add_argument("--debug-nodes", action="store_true",
+                   help="print each graph node as it runs: what it read, its sub-steps (for RAG: lexical, dense, "
+                        "fusion, rerank, passage filter, prompt, raw reply, parsed answer), and what it returned; "
+                        "also saved to runs/debug/<trace_id>.json (or COPILOT_DEBUG_NODES=1)")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -505,6 +534,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--store", choices=["sqlite", "sqlite_vec", "chroma"])
     p.add_argument("-k", type=int)
     p.add_argument("--full", action="store_true", help="print each chunk's full text")
+    p.add_argument("--stages", action="store_true",
+                   help="every stage of the pipeline: what it searched, the first-stage lists, the fusion "
+                        "arithmetic, and the rerank, so a wrong hit can be traced to the stage that caused it")
     _log_flags(p)
     p.add_argument("--compare", action="store_true", help="every mode × available store, side by side")
     p.add_argument("--modes", help="with --compare: comma-separated modes")
@@ -513,12 +545,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("decide", help="decision playground: every question's answer, distribution, confidence")
     p.add_argument("message")
-    p.add_argument("--decider", choices=["jev", "keyword", "llm"], help="default: router.kind from the profile")
+    p.add_argument("--decider", choices=["laya", "keyword", "llm"], help="default: router.kind from the profile")
     p.add_argument("--account", help="session account (default: app.account_id)")
     p.set_defaults(func=cmd_decide)
 
-    sub.add_parser("jev-smoke", help="send the Jev reference request; print noul, model, usage, latency"
-                   ).set_defaults(func=cmd_jev_smoke)
+    sub.add_parser("laya-smoke", help="send the Laya reference request; print noul, checkpoint, usage, latency"
+                   ).set_defaults(func=cmd_laya_smoke)
 
     p = sub.add_parser("ask", help="one turn; prints the answer and a compact trace")
     p.add_argument("message")

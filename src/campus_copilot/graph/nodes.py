@@ -21,6 +21,7 @@ from ..decisions.stub import StubDecider
 from ..ingest import store as kb
 from ..llm import prompts
 from ..llm.client import get_llm
+from ..observability.node_debug import NullDebugger, answers_table
 from ..observability.trace import Tracer
 from ..rag import condense as condense_mod
 from ..rag.answer import answer as grounded_answer
@@ -33,7 +34,7 @@ from ..tools.registry import ToolContext, registry
 from . import agent as agent_mod
 from . import arguments
 from .capabilities import Capabilities
-from .memory import jev_history, model_window
+from .memory import laya_history, model_window
 
 log = logging.getLogger(__name__)
 SQL_ROUTES = {"timetable", "deadlines", "rooms", "library", "calendar"}
@@ -64,6 +65,7 @@ class Runtime:
         self.courses = queries.course_codes(connection.read_connection(self.db_path))
         self.catalogue = qcat.turn_catalogue(self.courses)
         self.tracers: dict[str, Tracer] = {}
+        self.debug = NullDebugger()  # Copilot swaps in a NodeDebugger for --debug-nodes
         self.transport = transport or self._transport()
 
     def _transport(self):
@@ -136,6 +138,10 @@ class Nodes:
     def span(self, state: dict, name: str, **attrs):
         return self.rt.tracer(state["trace_id"]).span(name, **attrs)
 
+    def dbg(self, node: str, title: str, data=None) -> None:
+        """Report a sub-step to the node debugger (a no-op unless --debug-nodes is on)."""
+        self.rt.debug.step(node, title, data)
+
     def window(self, state: dict) -> list[dict]:
         if not self.rt.caps.memory:
             return []
@@ -165,6 +171,9 @@ class Nodes:
             window = model_window(_history(state), self.rt.settings)
             span.set(history_messages=len(_history(state)), window_messages=len(window.messages),
                      dropped_messages=window.dropped_messages, dropped_tokens=window.dropped_tokens)
+            self.dbg("begin", "history window the chat model will see (graph/memory.py · model_window)",
+                     {"history_messages": len(_history(state)), "kept": len(window.messages),
+                      "dropped": window.dropped_messages, "dropped_tokens": window.dropped_tokens})
             notes = [getattr(self.rt, "transport_note")] if getattr(self.rt, "transport_note", None) else []
             return {**PER_TURN_RESET, "turn": int(state.get("turn") or 0) + 1, "notes": notes,
                     "query": {"original": state.get("message", "")}}
@@ -192,13 +201,19 @@ class Nodes:
         with self.span(state, "guard_and_route") as span:
             conn = connection.read_connection(self.rt.db_path)
             account = state["account_id"]
-            turn_state = qcat.turn_state(state["message"], jev_history(_history(state)), account,
+            turn_state = qcat.turn_state(state["message"], laya_history(_history(state)), account,
                                          queries.enrolled_courses(conn, account), state.get("image_text"))
+            self.dbg("guard_and_route", f"state sent to the decider ({self.rt.decider.name}), with "
+                     f"{len(self.rt.catalogue)} questions (decisions/questions.py · turn_catalogue)", turn_state)
             decision = self.rt.decider.decide(turn_state, qcat.wire(self.rt.catalogue))
             notes = []
             if not decision.ok:
                 notes.append(f"decider {self.rt.decider.name} failed ({decision.error}); stub decider used")
+                self.dbg("guard_and_route", f"decider failed: {decision.error}; the stub decider answers instead")
                 decision = StubDecider().decide(turn_state, qcat.wire(self.rt.catalogue))
+            self.dbg("guard_and_route", f"answers from {decision.decider} ({decision.model}) in {decision.ms:.0f} ms"
+                     + ("; " + "; ".join(decision.notes) if decision.notes else ""),
+                     "\n".join(answers_table(decision.answers)))
             span.set(decider=decision.decider, model=decision.model, decision=decision.answers,
                      tokens_in=decision.usage.get("input_tokens"), tokens_out=decision.usage.get("output_tokens"),
                      stub=decision.stub or None, decider_calls=1)
@@ -219,6 +234,9 @@ class Nodes:
                 has_slots=has_slots, force_agent=str(self.rt.profile.get("agent.force", "")),
                 severity_check=caps.guards)
             span.set(action=action.kind, reason=action.reason, flags=action.flags or None)
+            self.dbg("apply_policy", "thresholds from the profile [policy] and [router] tables",
+                     {k: v for k, v in vars(self.rt.thresholds).items()})
+            self.dbg("apply_policy", f"decision: {action.kind} ({action.reason})", action.reply or None)
             return {"action": action.kind, "route": action.route or state.get("route"),
                     "flags": action.flags, "answer": action.reply or "",
                     "notes": state.get("notes", []) + [f"policy: {action.reason}"]}
@@ -242,8 +260,8 @@ class Nodes:
     def condense_query(self, state: dict) -> dict:
         with self.span(state, "condense_query") as span:
             history = self.window(state)
-            mode = self.rt.profile.get("rag.condense_query", "jev_gated")
-            if not self.rt.caps.decisions and mode == "jev_gated":
+            mode = self.rt.profile.get("rag.condense_query", "laya_gated")
+            if not self.rt.caps.decisions and mode == "laya_gated":
                 mode = "always"
             decision = _decision(state)
             follow = decision.noul("follow_up") if decision else None
@@ -251,6 +269,12 @@ class Nodes:
                                            follow, self.rt.thresholds.follow_up)
             for reply in result.replies:
                 span.record_llm(reply)
+            self.dbg("condense_query", f"gate ({mode}): {'OPEN' if result.ran else 'closed'} because {result.reason}",
+                     {"follow_up": follow, "threshold": self.rt.thresholds.follow_up, "history_messages": len(history)})
+            if result.ran:
+                self.dbg("condense_query", "rewrite by the small model (llm/client.py · LLM.condense)",
+                         {"original": result.original, "rewritten": result.rewritten or "(unchanged)",
+                          "fallback_to_original": result.fallback})
             span.set(**{"query.original": result.original, "query.rewritten": result.rewritten, "gate": result.reason,
                         "ran": result.ran})
             return {"query": result.as_dict()}
@@ -260,17 +284,31 @@ class Nodes:
         with self.span(state, "rag_answer") as span:
             query = (state.get("query") or {}).get("rewritten") or state["message"]
             use_judge = rt.caps.guards and rt.profile.get("rag.passage_filter", True)
+            self.dbg("rag_answer", "0 search query", {"query": query, "rewritten": query != state["message"],
+                                                        "mode": rt.profile.get("rag.mode"),
+                                                        "top_k": rt.profile.get("rag.top_k"),
+                                                        "candidates": rt.profile.get("rag.candidates")})
             with self.span(state, "retrieve", query=query) as rspan:
                 result = retrieve(query, rt.settings, conn=rt.kb_conn, embedder=rt.embedder, decider=rt.decider)
                 rspan.set(mode=result.mode, store=result.store, hits=[c.citation for c in result.chunks],
                           candidates=result.candidates, latency=result.latency_ms,
                           ranking=[c.describe() for c in result.chunks], retrieval_notes=result.notes or None)
+            if rt.debug:
+                self.dbg("rag_answer", "1 what the search runs against (rag/retrieve.py · _setup)",
+                         "\n".join(f"{k:<24} {v}" for k, v in result.setup.items()))
+                for stage, rows in result.stages.items():
+                    self.dbg("rag_answer", f"{stage} (rag/retrieve.py) - {len(rows)} chunks",
+                             "\n".join(_chunk_line(r, full=rt.debug.full) for r in rows))
+                self.dbg("rag_answer", f"retrieval done in {result.latency_ms:.0f} ms, "
+                         f"{result.candidates} candidates -> {len(result.chunks)} kept"
+                         + (f", {len(result.dropped)} below rag.rerank_min_relevance" if result.dropped else ""),
+                         result.notes or None)
             chunks, dropped = result.chunks, []
             notes = list(result.notes)
             if use_judge and chunks and result.mode not in ("dense+judge", "long_context"):
                 with self.span(state, "judge_passages", decider=rt.decider.name) as jspan:
                     before = dict(rt.decider.usage_totals)
-                    # the `jev` reranker has already asked the passage questions; ask only for the rest
+                    # the `laya` reranker has already asked the passage questions; ask only for the rest
                     unjudged = [c for c in chunks if c.judge is None]
                     for chunk, verdict in zip(unjudged, rt.decider.judge_passages(query, [c.text for c in unjudged])
                                               if unjudged else []):
@@ -288,22 +326,42 @@ class Nodes:
                             keep.append(chunk)
                     chunks = keep
                     jspan.set(kept=[c.citation for c in keep], dropped=[c.citation for c in dropped])
+                    self.dbg("rag_answer", "4 passage filter: Laya passage questions per chunk "
+                             "(decisions/questions.py · passage_catalogue; drop when injection > "
+                             f"{rt.profile.get('policy.passage_injection', 0.70)} or relevant < "
+                             f"{rt.profile.get('policy.passage_relevant', 0.45)})",
+                             "\n".join(f"{'KEEP' if c in keep else 'DROP'} {c.citation:<34} "
+                                       + "  ".join(f"{k} {float(v):.2f}" for k, v in (c.judge or {}).items()
+                                                   if isinstance(v, (int, float)))
+                                       for c in keep + dropped))
                     for c in dropped:
                         log.info("passage filter dropped %s (relevant %.2f, injection %.2f)", c.citation,
                                  (c.judge or {}).get("relevant", 0.0), (c.judge or {}).get("injection", 0.0))
             log.info("context for the model: %d passages, %d tokens", len(chunks), sum(c.token_count for c in chunks))
             llm = rt.llm
             decision = _decision(state)
-            if rt.profile.get("llm.model_routing", "off") == "jev_complexity" and decision:
+            if rt.profile.get("llm.model_routing", "off") == "laya_complexity" and decision:
                 complexity = decision.score("complexity", 1.0) or 0.0
                 if complexity < 0.7:
                     llm = rt.small_llm
                     notes.append(f"model routing: complexity {complexity:.2f} -> small model")
+            self.dbg("rag_answer", f"5 context for the model: {len(chunks)} passages, "
+                     f"{sum(c.token_count for c in chunks)} tokens, best first (rag/answer.py · passages_for)",
+                     "\n".join(f"#{c.rank} {c.citation} {c.token_count} tok" for c in chunks) or "(none: abstain)")
             answered = grounded_answer(query, chunks, llm, history=self.window(state), original=state["message"])
             for reply in answered.replies:
                 span.record_llm(reply)
+                self.dbg("rag_answer", "6 prompt sent to the chat model (llm/client.py · LLM.grounded_answer)",
+                         _render_prompt(reply.prompt))
+                self.dbg("rag_answer", f"7 raw reply from {reply.provider}:{reply.model} in {reply.ms:.0f} ms, "
+                         f"{reply.tokens_in} tokens in, {reply.tokens_out} out" + (" (STUB)" if reply.stub else ""),
+                         reply.text)
             notes += answered.notes
             kind = "abstain" if answered.grounded.abstained else "answer"
+            self.dbg("rag_answer", "8 parsed answer (llm/client.py · LLM._parse_grounded: JSON, citations checked "
+                     "against the passages that were sent)",
+                     {"answer": answered.grounded.answer, "abstained": answered.grounded.abstained,
+                      "citations": [c.render() for c in answered.grounded.citations], "notes": answered.notes})
             used = {c.chunk_id for c in chunks}
             sources = [{**c.as_dict(), "in_context": c.chunk_id in used} for c in result.chunks]
             span.set(kind=kind, citations=[c.render() for c in answered.grounded.citations])
@@ -334,6 +392,9 @@ class Nodes:
             threshold = float(rt.profile.get("policy.claim_support", 0.80))
             supported = all(v["label"] == "supports" and v["confidence"] >= threshold for v in verdicts)
             span.set(claims=len(claims), supported=supported, verdicts=[v["label"] for v in verdicts])
+            self.dbg("verify_answer", f"claim_support per answer sentence (accept: supports with confidence >= "
+                     f"{threshold}) -> {'all supported' if supported else 'NOT supported: regenerate once'}",
+                     "\n".join(f"{v['label'] or '?':<12} {v['confidence']:.2f}  {c}" for c, v in zip(claims, verdicts)))
             if supported:
                 return {}
             query = (state.get("query") or {}).get("rewritten") or state["message"]
@@ -360,6 +421,9 @@ class Nodes:
             proposal = arguments.propose(state.get("route") or "", state.get("decision") or {}, state["message"],
                                          self.window(state), state.get("slots") or {}, rt.today, image_event)
             span.set(tool=proposal.tool, args=proposal.args, reason=proposal.reason)
+            self.dbg("single_tool", "arguments filled from the decision answers (graph/arguments.py · propose)",
+                     {"tool": proposal.tool, "args": proposal.args, "reason": proposal.reason,
+                      "clarify": proposal.clarify})
             if proposal.clarify or not proposal.tool:
                 text = proposal.clarify or prompts.CLARIFY_GENERIC
                 return {"answer": text, "result": TurnResult(kind="clarify", answer=text,
@@ -412,6 +476,8 @@ class Nodes:
             step = agent_mod.next_step(rt, state, observations, candidates, history)
             span.record_llm(step.reply if hasattr(step.reply, "provider") else None)
             span.set(action=step.action, tool=step.tool, args=step.args, reason=step.reason)
+            self.dbg("agent_reason", f"step {len(observations) + 1} ({rt.profile.get('agent.mode', 'json')} mode)",
+                     {"action": step.action, "tool": step.tool, "args": step.args, "reason": step.reason})
             plan = {"action": step.action, "tool": step.tool, "args": step.args, "reason": step.reason}
             if step.action == "call_tool":
                 spec = rt.registry.get(step.tool or "")
@@ -450,7 +516,7 @@ class Nodes:
         rt = self.rt
         pending = state["pending_write"]
         with self.span(state, "risk_gate", tool=pending["tool"]) as span:
-            gate_state = {"request": state["message"], "history": jev_history(_history(state)), "action": pending,
+            gate_state = {"request": state["message"], "history": laya_history(_history(state)), "action": pending,
                           "session": {"account_id": state["account_id"]}}
             before = dict(rt.decider.usage_totals)
             decision = rt.decider.decide(gate_state, qcat.wire(qcat.gate_catalogue()))
@@ -461,6 +527,8 @@ class Nodes:
             own = decision.noul("own_account", 0.0) or 0.0
             impact = decision.score("impact", 0.0) or 0.0
             span.set(explicit=explicit, own_account=own, impact=impact)
+            self.dbg("risk_gate", "gate questions (decisions/questions.py · gate_catalogue): explicit >= 0.5 and "
+                     "own_account >= 0.5 lead to confirm", "\n".join(answers_table(decision.answers)))
             if pending.get("account_id") != state["account_id"] or own < 0.5:
                 text = prompts.REFUSE_OTHER_ACCOUNT
                 return {"pending_write": None, "answer": text,
@@ -508,6 +576,46 @@ class Nodes:
             if result["kind"] != "confirm":
                 update["messages"] = [AIMessage(result["answer"])]
             return update
+
+
+def _chunk_line(row: dict, full: bool = False) -> str:
+    """One chunk snapshot (ScoredChunk.brief) as debugger lines: rank, citation, every score, first words.
+
+    With `--full` it adds the chunk id and the fusion arithmetic, so a chunk can be looked up in the
+    knowledge base (`cli ingest --show chunk --doc <source_id>`) and a surprising rank can be recomputed
+    by hand.
+    """
+    sig = row.get("signals") or {}
+    parts = [f"#{row['rank']}" if row.get("rank") else "- ", f"{row['citation']:<34}", f"{row['score']:.4f}"]
+    for key, label in (("bm25", "bm25"), ("cosine", "cos"), ("rrf", "rrf"), ("relevance", "rel")):
+        if key in sig:
+            parts.append(f"{label} {float(sig[key]):.3f}")
+    for key, label in (("lexical_rank", "lexical #"), ("dense_rank", "dense #"), ("first_stage_rank", "was #")):
+        if key in sig:
+            parts.append(f"{label}{sig[key]}")
+    parts.append(f"{row.get('tokens', 0)} tok")
+    if row.get("judge"):
+        parts.append("judge " + " ".join(f"{k} {float(v):.2f}" for k, v in row["judge"].items()
+                                         if isinstance(v, (int, float))))
+    lines = ["  ".join(parts)]
+    if full:
+        where = row.get("section") or (f"page {row['page']}" if row.get("page") else "-")
+        lines.append(f"        chunk {row.get('chunk_id', '?')}  in {row.get('source_id', '?')} › {where}"
+                     + (f"  [{row['language']}]" if row.get("language") else ""))
+        if sig.get("rrf_terms"):
+            lines.append(f"        rrf = {sig['rrf_terms']}")
+    lines.append(f"        {row['text']}")
+    return "\n".join(lines)
+
+
+def _render_prompt(messages: list[dict]) -> str:
+    lines = []
+    for m in messages or []:
+        content = m.get("content")
+        if isinstance(content, list):
+            content = " ".join(p.get("text", "[image]") if isinstance(p, dict) else str(p) for p in content)
+        lines.append(f"--- {m.get('role')}\n{content}")
+    return "\n".join(lines) or "(no prompt recorded)"
 
 
 def _slots_after(slots: dict, calls: list[dict]) -> dict:

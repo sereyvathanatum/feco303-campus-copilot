@@ -7,12 +7,14 @@ and scores the pair. Backends:
 
 * `nim`: the NVIDIA cross-encoder reranker (`NIM_RERANK_MODEL`); one request for the whole pool;
   score = logit, relevance = sigmoid(logit)
-* `jev`: the decision model's passage questions (one request per passage, in parallel);
+* `laya`: the decision model's passage questions (one batched pass over the passages);
   relevance = 0.6 x has_answer + 0.4 x relevant; the verdicts stay on the chunks, so the passage
   filter does not ask again
 * `local`: offline heuristic, no model: weighted query-term coverage, query-bigram overlap, and the
   first-stage rank. Labelled as a heuristic; it is not a cross-encoder
-* `auto`: `nim` when a NIM key is available, else `local`; a failed `nim` call falls back to `local`
+* `auto`: `laya` when Laya is available, else `nim` when a NIM key is available, else `local`; a failed
+  `laya` or `nim` call falls back to `local`. `laya` without Laya installed degrades the same way, so an
+  offline run reranks with the heuristic instead of with the stub decider
 
 The result is ordered by relevance, best first. That order is the order of passages in the prompt,
 and each passage carries its rank and relevance there (see `rag/answer.py`).
@@ -29,7 +31,7 @@ from dataclasses import dataclass, field
 from ..textutil import STOP, coverage, stem
 
 log = logging.getLogger(__name__)
-RERANKERS = ("auto", "nim", "jev", "local")
+RERANKERS = ("auto", "nim", "laya", "local")
 _WORD = re.compile(r"[a-z0-9]+")
 
 
@@ -72,7 +74,7 @@ def nim_scores(settings, query: str, texts: list[str], session=None) -> list[flo
     return scores
 
 
-def jev_scores(decider, query: str, candidates: list) -> list[float]:
+def laya_scores(decider, query: str, candidates: list) -> list[float]:
     verdicts = decider.judge_passages(query, [c.text for c in candidates])
     scores = []
     for chunk, verdict in zip(candidates, verdicts):
@@ -102,16 +104,25 @@ def resolve(settings) -> str:
     backend = str(settings.profile.get("rag.reranker", "auto"))
     if backend not in RERANKERS:
         raise ValueError(f"rag.reranker must be one of {', '.join(RERANKERS)}, not {backend!r}")
+    if backend == "laya" and not settings.has_laya:
+        # the stub decider would answer the passage questions and the order would not be Laya's
+        log.warning("rag.reranker is laya but Laya is unavailable; falling back")
+        backend = "auto"
     if backend == "auto":
+        if settings.has_laya:
+            return "laya"
         return "nim" if settings.has_nim else "local"
     return backend
 
 
 def rerank(settings, query: str, candidates: list, k: int, decider=None, session=None,
            backend: str | None = None) -> RerankOutcome:
+    asked = str(settings.profile.get("rag.reranker", "auto"))
     backend = backend or resolve(settings)
     started = time.perf_counter()
     notes: list[str] = []
+    if asked not in ("auto", backend):
+        notes.append(f"rag.reranker is {asked} but {asked} is unavailable; {backend} ran instead")
     if not candidates:
         return RerankOutcome([], backend, 0.0, notes)
     try:
@@ -119,10 +130,10 @@ def rerank(settings, query: str, candidates: list, k: int, decider=None, session
             scores = nim_scores(settings, query, [c.text for c in candidates], session=session)
             relevance = [_sigmoid(s) for s in scores]
             label = f"reranker logit ({settings.rerank_model})"
-        elif backend == "jev":
+        elif backend == "laya":
             from ..decisions.base import get_decider
 
-            scores = jev_scores(decider or get_decider(settings), query, candidates)
+            scores = laya_scores(decider or get_decider(settings), query, candidates)
             relevance = scores
             label = "decision-model relevance (0.6 has_answer + 0.4 relevant)"
         else:

@@ -10,7 +10,7 @@ from campus_copilot.rag.retrieve import retrieve
 
 def test_every_profile_loads_and_inherits_from_baseline():
     names = config.list_profiles()
-    assert {"e01_zero_shot", "e05_jev", "e09_condense_off", "e13_controls_off", "e15_long_context"} <= set(names)
+    assert {"e01_zero_shot", "e05_laya", "e09_condense_off", "e13_controls_off", "e15_long_context"} <= set(names)
     for name in names:
         profile = config.load_profile(name)
         assert profile.get("rag.top_k") is not None and profile.capabilities

@@ -17,7 +17,7 @@ The ReAct loop, stopping rules (call limit, repeat detector), three agent modes,
 ## Code added in this step
 | File | Role |
 |---|---|
-| `graph/agent.py` | the bounded loop in `native`, `json`, and `jev_dispatch` modes |
+| `graph/agent.py` | the bounded loop in `native`, `json`, and `laya_dispatch` modes |
 | `graph/nodes.py` | `agent_reason`, `agent_act`, `risk_gate`, `confirm` |
 | `tools/campus.py` | `book_room`, `place_hold`, `add_event` with rule checks |
 

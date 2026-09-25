@@ -33,9 +33,9 @@ def _guarded_create_connection(address, *args, **kwargs):
     return _real_create_connection(address, *args, **kwargs)
 
 
-HIDDEN = ("NVIDIA_API_KEY", "NVIDIA_NEMOTRON_API_KEY", "GEMINI_API_KEY", "HF_TOKEN", "TYPESAFE_API_KEY",
-          "COPILOT_PROFILE", "COPILOT_TODAY", "COPILOT_CHAT_PROVIDER", "COPILOT_ENV_FILE", "COPILOT_APIS_LIVE",
-          "COPILOT_TOKENIZER")
+HIDDEN = ("NVIDIA_API_KEY", "NVIDIA_NEMOTRON_API_KEY", "GEMINI_API_KEY", "HF_TOKEN", "LAYA_API_KEY",
+          "COPILOT_PROFILE", "COPILOT_TODAY", "COPILOT_CHAT_PROVIDER", "LAYA_BASE_URL", "LAYA_MODEL",
+          "COPILOT_ENV_FILE", "COPILOT_APIS_LIVE", "COPILOT_TOKENIZER", "LAYA_MODE", "COPILOT_DEBUG_NODES")
 SAVED_ENV: dict[str, str | None] = {}
 
 
@@ -43,8 +43,10 @@ def pytest_configure(config):
     # Keys and env files from the developer machine never reach offline tests; live tests restore them.
     for name in HIDDEN:
         SAVED_ENV[name] = os.environ.get(name)
-    for name in HIDDEN[:8]:
+    for name in HIDDEN[:10]:
         os.environ.pop(name, None)
+    os.environ["LAYA_MODE"] = "off"  # offline tests never load a Laya checkpoint; tests that need Laya fake it
+    os.environ.pop("COPILOT_DEBUG_NODES", None)
     os.environ["COPILOT_ENV_FILE"] = str(ROOT / "tests" / "_no_env_file")
     os.environ["COPILOT_TODAY"] = "2026-10-06"
     os.environ["COPILOT_APIS_LIVE"] = "false"

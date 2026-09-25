@@ -8,5 +8,5 @@ include_adversarial = true
 live = false
 fixture_variant = "poisoned"
 
-[jev]
-model = "jev-1.13.0"
+[laya]
+model = "auto"

@@ -1,0 +1,10 @@
+{
+  "state": "Hi, my ID card stopped opening the library gate this morning and the exam in Room B-204 starts in 30 minutes. Please help ASAP.",
+  "model": "auto",
+  "questions": {
+    "urgency": {
+      "type": "noul",
+      "instructions": "Does this message express urgency?"
+    }
+  }
+}

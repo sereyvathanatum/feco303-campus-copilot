@@ -2,7 +2,7 @@
 
 The copilot is one LangGraph `StateGraph` whose nodes are switched on by the capabilities of the active
 profile (`graph/capabilities.py`). Code owns the workflow; at each branch point a System One decision model
-(TypeSafe Jev, or the offline stub) supplies typed answers with probabilities; the chat model (Gemma 4 on
+(Laya, or the offline stub) supplies typed answers with probabilities; the chat model (Gemma 4 on
 NVIDIA NIM or Google AI Studio) writes answers and reads images; SQLite and public APIs supply facts. Every
 turn leaves a trace.
 
@@ -80,7 +80,7 @@ graph TD;
 |---|---|---|
 | `begin` | reset per-turn state, measure the model window | `graph/memory.py` |
 | `read_image` | vision model → transcription + draft event; per-field checks | `multimodal/notice_reader.py` |
-| `guard_and_route` | ONE decision request: guards, route, arguments | `decisions/questions.py`, `decisions/jev.py` |
+| `guard_and_route` | ONE decision request: guards, route, arguments | `decisions/questions.py`, `decisions/laya.py` |
 | `apply_policy` | thresholds and confidence bands → an action | `decisions/policy.py` |
 | `clarify` / `refuse` / `handoff` / `abstain` | fixed replies (docs/implementation-plan.md §3.2) | `llm/prompts.py` |
 | `condense_query` | rewrite a follow-up for retrieval, gated by `follow_up` | `rag/condense.py` |

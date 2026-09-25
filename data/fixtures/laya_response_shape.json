@@ -1,0 +1,43 @@
+{
+ "model": "laya/english",
+ "routing": {
+  "model": "english",
+  "repo": "convaiinnovations/laya",
+  "reason": "latin script, english tokens"
+ },
+ "usage": {
+  "input_tokens": 302,
+  "output_tokens": 0
+ },
+ "answers": {
+  "urgency": {
+   "type": "noul",
+   "noul": 0.98
+  },
+  "dept": {
+   "type": "choice",
+   "choice": "facilities",
+   "confidence": 0.87,
+   "probabilities": {
+    "facilities": 0.87,
+    "registry": 0.1,
+    "library": 0.03
+   }
+  },
+  "frustration": {
+   "type": "score",
+   "score": 1.41,
+   "confidence": 0.52,
+   "legend": {
+    "0": "Calm, neutral or happy",
+    "1": "Mildly annoyed or disappointed",
+    "2": "Very angry or furious"
+   },
+   "probabilities": {
+    "0": 0.11,
+    "1": 0.37,
+    "2": 0.52
+   }
+  }
+ }
+}

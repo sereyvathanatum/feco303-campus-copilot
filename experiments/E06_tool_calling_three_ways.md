@@ -3,7 +3,7 @@ id: E06
 title: Tool calling three ways
 week: 7
 time_box: 45 min
-profiles: [e06_native, e06_json, e06_jev_dispatch]
+profiles: [e06_native, e06_json, e06_laya_dispatch]
 ---
 # E06: Tool calling three ways
 

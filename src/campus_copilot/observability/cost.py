@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 
-PRICE_KEYS = {"jev": "jev", "nim": "nim_chat", "google": "google_chat", "stub": None}
+PRICE_KEYS = {"laya": "laya", "nim": "nim_chat", "google": "google_chat", "stub": None}
 
 
 def provider_of(span: dict) -> str | None:

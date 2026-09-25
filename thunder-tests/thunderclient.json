@@ -73,7 +73,7 @@
     ],
     "body": {
       "type": "json",
-      "raw": "{\n  \"model\": \"nvidia/nemotron-3-embed-1b\",\n  \"input\": [\n    \"missed lab sessions penalty\"\n  ],\n  \"input_type\": \"query\",\n  \"truncate\": \"NONE\",\n  \"encoding_format\": \"float\"\n}",
+      "raw": "{\n  \"model\": \"nvidia/nemotron-3-embed-1b\",\n  \"input\": [\n    \"yearly tuition fee Cyber Security\"\n  ],\n  \"input_type\": \"query\",\n  \"truncate\": \"NONE\",\n  \"encoding_format\": \"float\"\n}",
       "form": []
     }
   },
@@ -98,8 +98,8 @@
     "_id": "req-05",
     "colId": "col-campus-copilot",
     "containerId": "",
-    "name": "Jev systemone (reference call)",
-    "url": "{{typesafeBase}}/systemone",
+    "name": "Laya systemone (reference call)",
+    "url": "{{layaBase}}/systemone",
     "method": "POST",
     "sortNum": 50000,
     "created": "2026-09-23T00:00:00.000Z",
@@ -107,7 +107,7 @@
     "headers": [
       {
         "name": "Authorization",
-        "value": "Bearer {{process.env.TYPESAFE_API_KEY}}"
+        "value": "Bearer {{process.env.LAYA_API_KEY}}"
       },
       {
         "name": "Content-Type",
@@ -116,7 +116,7 @@
     ],
     "body": {
       "type": "json",
-      "raw": "{\n  \"state\": \"Hi, I've been trying to connect my Stripe account for 3 days and the integration keeps failing. I'm losing sales. Please help ASAP.\",\n  \"model\": \"jev-latest\",\n  \"questions\": {\n    \"urgency\": {\n      \"type\": \"noul\",\n      \"instructions\": \"Does this message express urgency?\"\n    }\n  }\n}",
+      "raw": "{\n  \"state\": \"Hi, my ID card stopped opening the library gate this morning and the exam in Room B-204 starts in 30 minutes. Please help ASAP.\",\n  \"model\": \"auto\",\n  \"questions\": {\n    \"urgency\": {\n      \"type\": \"noul\",\n      \"instructions\": \"Does this message express urgency?\"\n    }\n  }\n}",
       "form": []
     }
   },

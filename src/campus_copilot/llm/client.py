@@ -81,6 +81,7 @@ class LLM:
                     reply = client.complete(messages, max_tokens=max_tokens, temperature=temperature, tools=tools,
                                             json_mode=json_mode)
                     reply.notes.extend(f"fallback: {f}" for f in failures)
+                reply.prompt = messages
                 self.log.replies.append(reply)
                 log.info("%s by %s:%s in %.0f ms, %d tokens in, %d out%s", task, reply.provider, reply.model,
                          reply.ms, reply.tokens_in, reply.tokens_out, " (STUB)" if reply.stub else "")
