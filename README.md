@@ -5,10 +5,11 @@ second half of an AI-applications course: LLMs and RAG, System One decision mode
 and free public APIs, bounded agent loops, memory, MCP, evaluation, tracing, tool-layer security, and
 multimodal input.
 
-> Illustrative demo system. All people, records, and handbook rules are synthetic; nothing here is official
-> CamTech policy.
+> Teaching system. The knowledge base is CamTech University's own published material (the prospectus and
+> the academic information pages, in `data/sources/`); the people, accounts, timetables, and loans in the
+> campus database are synthetic.
 
-The chatbot answers handbook questions with page citations, keeps earlier turns in memory, looks up
+The chatbot answers questions from the CamTech documents with citations, keeps earlier turns in memory, looks up
 timetables, rooms, and library records, converts USD to riel at a live rate, checks the weather, reads
 photographed notices, and declines what it cannot answer.
 
@@ -16,11 +17,11 @@ photographed notices, and declines what it cannot answer.
 
 ```bash
 python -m venv .venv
-# bash / WSL / macOS
-.venv/bin/python -m pip install -r requirements.txt
-# Windows PowerShell
-.venv\Scripts\python -m pip install -r requirements.txt
+source .venv/bin/activate                    # bash / WSL / macOS
+# .venv\Scripts\Activate.ps1                 # Windows PowerShell
+# the prompt now starts with (.venv); run `activate` again in every new terminal
 
+python -m pip install -r requirements.txt
 python -m campus_copilot.cli init-env        # copies .env.example to .env when absent (never overwrites)
 python -m campus_copilot.cli check           # run mode, .env path, model IDs, reachability
 python -m campus_copilot.cli seed            # campus database
@@ -30,14 +31,14 @@ python -m campus_copilot.cli ui              # Gradio app on http://127.0.0.1:78
 ```
 
 With no keys everything runs **offline**: stub models, a stub decider (labelled STUB), and recorded API
-fixtures. Keys for NVIDIA NIM, Google AI Studio, and TypeSafe Jev switch parts to live mode
-([docs/setup_keys.md](docs/setup_keys.md)).
+fixtures. Keys for NVIDIA NIM and Google AI Studio, and the `laya` package for the decision model, switch
+parts to live mode ([docs/setup_keys.md](docs/setup_keys.md)).
 
 | Mode | Keys | Live components |
 |---|---|---|
 | `offline` | none | none; stubs and fixtures |
 | `nim` | NIM and/or Gemini | chat, vision, embeddings; stub decider |
-| `full` | + TypeSafe | everything |
+| `full` | + `pip install laya` (no key) | everything |
 
 ## Two routes through the pack
 
@@ -86,8 +87,8 @@ All 14 run in one thread, in order (`data/demo_turns.jsonl`); `python -m campus_
 
 | # | Message | Concept shown | First passing step |
 |---:|---|---|---:|
-| 1 | What happens after more than three missed lab sessions? | RAG, page-level citations | 5 |
-| 2 | And for late assignments? | follow-up rewriting before retrieval | 6 |
+| 1 | What is the yearly tuition fee for Cyber Security? | RAG, citations to the source document | 5 |
+| 2 | And for a master's degree? | follow-up rewriting before retrieval | 6 |
 | 3 | What is the cafeteria menu on Friday? | retrieved is not relevant | 5 |
 | 4 | When and where is the FECO303 lab this week? | DB tool, argument filling | 8 |
 | 5 | Is ISBN 9780262046305 on the shelf? | connector pattern | 8 |
@@ -108,9 +109,9 @@ All 14 run in one thread, in order (`data/demo_turns.jsonl`); `python -m campus_
 | `init-env`, `check` | set up `.env`; print mode, keys (state only), models, reachability |
 | `seed` | build the synthetic campus database |
 | `ingest [--until STAGE] [--store all] [--resume RUN] [--show STAGE --doc ID] [--remove ID]`, `ingest add FILE --licence ...` | the knowledge-base pipeline |
-| `retrieve "..." [--compare] [--full]` | retrieval only, with every ranking signal; `--compare` prints the Retrieval Lab table |
-| `decide "..."`, `jev-smoke` | decision-model playground; the reference call |
-| `ask "..." [--image FILE] [--show-chunks [--full]]`, `chat` | one turn; an interactive session with `/thread`, `/trace`, `/chunks`, `/verbose`, `/profile` |
+| `retrieve "..." [--stages] [--compare] [--full]` | retrieval only, with every ranking signal; `--stages` prints each pipeline stage; `--compare` prints the Retrieval Lab table |
+| `decide "..."`, `laya-smoke` | decision-model playground; the reference call |
+| `ask "..." [--image FILE] [--show-chunks] [--debug-nodes] [--full]`, `chat` | one turn; `--debug-nodes` prints what every graph node read, did, and returned; an interactive session with `/thread`, `/trace`, `/chunks`, `/nodes`, `/verbose`, `/profile` |
 | `step N [--demo \| --check \| --chat]`, `demo` | the build path; the scripted turns |
 | `tools` | tool specs |
 | `eval [--subset X] [--judges] [--vision]` | evaluation set, judges, vision field accuracy |
@@ -121,6 +122,13 @@ All 14 run in one thread, in order (`data/demo_turns.jsonl`); `python -m campus_
 `--profile NAME` selects a profile from `profiles/`; `--set KEY=VALUE` changes one key for one run.
 `-v` prints one log line per step and the retrieval ranking on stderr; `-vv` adds every retrieval candidate
 and the full prompts; `--log-file PATH` (or `COPILOT_LOG_LEVEL` / `COPILOT_LOG_FILE`, for `ui`) keeps them.
+
+To see inside a turn, `--debug-nodes` (or `/nodes` in `cli chat`, or `COPILOT_DEBUG_NODES=1`) prints one block
+per graph node: the state it read, its sub-steps, and the update it returned, with the whole record saved to
+`runs/debug/<trace_id>.json`. For RAG turns the sub-steps cover the search setup, each first-stage list, the
+fusion arithmetic, the rerank, the passage filter, the prompt, the raw reply, and the parsed answer. Add
+`--full` for untruncated text, chunk ids, and the fusion terms. [TUTORIAL.md](TUTORIAL.md) walks
+through reading that output.
 
 ## Tests
 
@@ -134,9 +142,10 @@ python scripts/verify.py                # fresh venv -> install -> tests -> demo
 
 ## Documentation
 
+- [TUTORIAL.md](TUTORIAL.md): the whole build from project setup to the finished chatbot, phase by phase.
 - [docs/implementation-plan.md](docs/implementation-plan.md): the build plan (v5).
 - [docs/architecture.md](docs/architecture.md): the compiled graph and the design rules.
-- [docs/jev_primer.md](docs/jev_primer.md): the decision model's HTTP contract and answer types.
+- [docs/laya_primer.md](docs/laya_primer.md): the decision model's request contract and answer types.
 - [docs/setup_keys.md](docs/setup_keys.md), [docs/troubleshooting.md](docs/troubleshooting.md).
 - [docs/verify-at-build.md](docs/verify-at-build.md): model, package, and API facts as found at build time.
 - [docs/budgets.md](docs/budgets.md): latency and cost targets, measured.
